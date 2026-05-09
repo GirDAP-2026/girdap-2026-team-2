@@ -40,7 +40,7 @@ const I = {
 };
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Bugün', icon: I.home },
+  { id: 'dashboard', label: 'Ana Sayfa', icon: I.home },
   { id: 'customers', label: 'Müşterilerim', icon: I.users },
   { id: 'payments', label: 'Tahsilat', icon: I.invoice },
   { id: 'campaigns', label: 'Kampanyalar', icon: I.campaign, pro: true },
@@ -704,6 +704,80 @@ function getThemeChartColors() {
   };
 }
 
+// ============= SCOPE-AWARE STATS & CASHFLOW =============
+function getScopedStats() {
+  const s = currentScope();
+  if (!s.patron) return null;
+  if (s.isPatron) {
+    let today = 0, last2 = 0, last7 = 0, last30 = 0, openInvoices = 0, openTotal = 0, customers = 0, staff = 0;
+    s.patron.businessIds.forEach(bid => {
+      const b = BUSINESSES[bid];
+      today += estimateLastNDays(bid, 1);
+      last2 += estimateLastNDays(bid, 2);
+      last7 += estimateLastNDays(bid, 7);
+      last30 += estimateLastNDays(bid, 30);
+      openTotal += Math.round(b.baseMonthly * 0.06);
+      openInvoices += 3;
+      customers += b.customers;
+      staff += b.staffCount;
+    });
+    return { today, yesterday: last2 - today, last7, last30, openInvoices, openTotal, customers, staff };
+  }
+  const b = s.business;
+  const today = estimateLastNDays(b.id, 1);
+  const last2 = estimateLastNDays(b.id, 2);
+  return {
+    today,
+    yesterday: last2 - today,
+    last7: estimateLastNDays(b.id, 7),
+    last30: estimateLastNDays(b.id, 30),
+    openInvoices: 3,
+    openTotal: Math.round(b.baseMonthly * 0.06),
+    customers: b.customers,
+    staff: b.staffCount
+  };
+}
+
+function getScopedCashFlow() {
+  const s = currentScope();
+  const labels = [];
+  const actual = [];
+  const predicted = [];
+  const today = new Date();
+  const seedBase = (s.businessId || s.patronId) + (s.isPatron ? '-pat' : '');
+
+  // 30 gün geçmiş
+  for (let i = 30; i >= 1; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    labels.push(`${d.getDate()}/${d.getMonth() + 1}`);
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    const monthlyRev = s.isPatron ? getPatronRevenue(s.patronId, y, m) : getMonthlyRevenue(s.businessId, y, m);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const seed = simpleHash(seedBase + d.toISOString().slice(0, 10));
+    const variance = ((seed % 220) - 110) / 1000;
+    actual.push(Math.round((monthlyRev / daysInMonth) * (1 + variance)));
+    predicted.push(null);
+  }
+  // Bugün — köprü noktası
+  predicted[predicted.length - 1] = actual[actual.length - 1];
+
+  // 30 gün gelecek
+  for (let i = 1; i <= 30; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    labels.push(`${d.getDate()}/${d.getMonth() + 1}`);
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    const monthlyRev = s.isPatron ? getPatronRevenue(s.patronId, y, m) : getMonthlyRevenue(s.businessId, y, m);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const seed = simpleHash(seedBase + 'p' + d.toISOString().slice(0, 10));
+    const variance = ((seed % 280) - 140) / 1000;
+    actual.push(null);
+    predicted.push(Math.round((monthlyRev / daysInMonth) * (1 + variance)));
+  }
+  return { labels, actual, predicted };
+}
+
 function showToast(msg, variant) {
   const host = document.getElementById('toast-container');
   if (!host) return;
@@ -731,68 +805,64 @@ function healthBar(score) {
   </div>`;
 }
 
-// ============= VIEW: DASHBOARD =============
+// ============= VIEW: DASHBOARD (ANA SAYFA) =============
 function renderDashboard() {
   const s = currentScope();
+  const stats = getScopedStats();
+  const cashflowScoped = getScopedCashFlow();
+
   const greeting = s.isPatron
-    ? `${s.patron.fullName} · ${s.patron.businessIds.length} bayinizin özeti`
-    : `Günaydın ${s.patron?.fullName.split(' ')[0] || ''} — ${todaysActions.length} öneriniz var`;
-  setTopbarTitle('Bugün', greeting);
+    ? `${s.patron.fullName} · ${s.patron.businessIds.length} bayi birleşik`
+    : `${s.business.shortName} · ${SECTORS[s.business.sector].label} · ${s.business.location}`;
+  setTopbarTitle('Ana Sayfa', greeting);
   clearChart('cashflow');
 
-  const todayDelta = (todayStats.todaySales / todayStats.yesterdaySales - 1) * 100;
-  const cashChange = '+12,4%';
+  const todayDelta = stats.yesterday > 0 ? ((stats.today / stats.yesterday) - 1) * 100 : 0;
+  const last7Avg = Math.round(stats.last7 / 7);
+  const last30Avg = Math.round(stats.last30 / 30);
 
-  $view().innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-label">Bugünkü satış</div>
-        <div class="stat-card-value">${fmtTL(todayStats.todaySales)}</div>
-        <div class="stat-card-delta ${todayDelta >= 0 ? 'positive' : 'negative'}">
-          ${todayDelta >= 0 ? '↑' : '↓'} ${Math.abs(todayDelta).toFixed(1)}% düne göre
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Açık tahsilat</div>
-        <div class="stat-card-value">${fmtTL(todayStats.openInvoicesTotal)}</div>
-        <div class="stat-card-delta negative">${todayStats.openInvoices} fatura · 3'ü gecikmiş</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Yüksek riskli müşteri</div>
-        <div class="stat-card-value">${todayStats.highRiskCustomers}</div>
-        <div class="stat-card-delta neutral">8 müşteriden</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Bu ayki gelir</div>
-        <div class="stat-card-value">${fmtTL(todayStats.monthlyRevenue)}</div>
-        <div class="stat-card-delta positive">${cashChange} geçen aya göre</div>
-      </div>
-    </div>
-
-    <div class="app-grid-2">
-      <!-- Bugün Ne Yapayım? -->
-      <div class="app-card" style="grid-column: span 1;">
+  // Dinamik widget B içeriği — scope'a göre değişir
+  let widgetB = '';
+  if (s.isPatron) {
+    // Patron modu: bayi özeti
+    const ranked = s.patron.businessIds.map(bid => ({
+      b: BUSINESSES[bid],
+      last30: estimateLastNDays(bid, 30)
+    })).sort((a, b) => b.last30 - a.last30);
+    widgetB = `
+      <div class="app-card">
         <div class="app-card-header">
           <div>
-            <div class="app-card-title">Bugün ne yapayım?</div>
-            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">AI'nın bugün için 5 önerisi</div>
+            <div class="app-card-title">Bayilerim — 30 gün performansı</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">En iyi → en zayıf</div>
           </div>
-          <span class="badge badge-accent">AI öncelikli</span>
+          <span class="badge badge-accent">${s.patron.businessIds.length} bayi</span>
         </div>
-        <div class="app-card-body" style="display: flex; flex-direction: column; gap: 10px;">
-          ${todaysActions.map((a, i) => `
-            <div class="action-item">
-              <span class="action-item-icon">${a.icon}</span>
-              <div class="action-item-body">
-                <div class="action-item-text">${a.text}</div>
-                <button class="btn btn-sm btn-accent" onclick="handleAction(${i})">${a.action}</button>
-              </div>
-            </div>
-          `).join('')}
+        <div class="app-card-body" style="padding: 0;">
+          <table class="app-table">
+            <tbody>
+              ${ranked.map((r, i) => {
+                const sec = SECTORS[r.b.sector];
+                return `
+                  <tr onclick="enterBusinessMode('${s.patron.id}', '${r.b.id}')">
+                    <td style="width: 32px; text-align: center; font-size: 16px;">${sec.icon}</td>
+                    <td>
+                      <div style="font-weight: 600;">${r.b.shortName}</div>
+                      <div style="font-size: 11px; color: var(--odeal-muted);">${sec.label} · ${r.b.location}</div>
+                    </td>
+                    <td style="text-align: right; font-weight: 600;">${fmtTL(r.last30)}</td>
+                    <td style="text-align: right; font-size: 11px; color: var(--odeal-muted);">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <!-- Riskli Müşteriler özeti -->
+    `;
+  } else if (s.businessId === 'ayse-butik-kadikoy') {
+    // Ayşe Kadıköy — özel risky customers widget'ı
+    widgetB = `
       <div class="app-card">
         <div class="app-card-header">
           <div>
@@ -818,16 +888,125 @@ function renderDashboard() {
           </table>
         </div>
       </div>
+    `;
+  } else {
+    // Diğer KOBİ'ler için işletme analizi widget
+    const sec = SECTORS[s.business.sector];
+    widgetB = `
+      <div class="app-card">
+        <div class="app-card-header">
+          <div>
+            <div class="app-card-title">İşletme analizi</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">${sec.label} sektörü için sezon ve hava etkileri</div>
+          </div>
+        </div>
+        <div class="app-card-body">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+              <span style="color: var(--odeal-muted); font-size: 13px;">Top ürün</span>
+              <strong>${s.business.topProduct}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+              <span style="color: var(--odeal-muted); font-size: 13px;">Personel</span>
+              <strong>${s.business.staffCount} kişi</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+              <span style="color: var(--odeal-muted); font-size: 13px;">Müşteri</span>
+              <strong>${s.business.customers.toLocaleString('tr-TR')}</strong>
+            </div>
+            <div style="padding: 12px; background: rgba(255,107,53,0.06); border: 1px solid rgba(255,107,53,0.2); border-radius: 8px;">
+              <div style="font-size: 11px; color: var(--odeal-accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;">🌦️ Hava etkisi</div>
+              <div style="font-size: 12.5px; line-height: 1.5;">
+                Yağmur: <strong style="color:${sec.weatherImpact.yağmurlu >= 0 ? '#00c896' : '#f87171'}">${sec.weatherImpact.yağmurlu > 0 ? '+' : ''}${sec.weatherImpact.yağmurlu}%</strong> ·
+                Soğuk: <strong style="color:${sec.weatherImpact.soğuk >= 0 ? '#00c896' : '#f87171'}">${sec.weatherImpact.soğuk > 0 ? '+' : ''}${sec.weatherImpact.soğuk}%</strong> ·
+                Sıcak: <strong style="color:${sec.weatherImpact.sıcak >= 0 ? '#00c896' : '#f87171'}">${sec.weatherImpact.sıcak > 0 ? '+' : ''}${sec.weatherImpact.sıcak}%</strong>
+              </div>
+              <div style="font-size: 11.5px; color: var(--odeal-muted); margin-top: 6px; line-height: 1.5;">${sec.impactNote}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Bugün ne yapayım — sadece Ayşe Kadıköy için tam liste, diğerleri için generic
+  const showActionList = s.businessId === 'ayse-butik-kadikoy' && !s.isPatron;
+  const actionWidget = showActionList ? `
+      <div class="app-card" style="grid-column: span 1;">
+        <div class="app-card-header">
+          <div>
+            <div class="app-card-title">Bugün ne yapayım?</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">AI'nın bugün için 5 önerisi</div>
+          </div>
+          <span class="badge badge-accent">AI öncelikli</span>
+        </div>
+        <div class="app-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+          ${todaysActions.map((a, i) => `
+            <div class="action-item">
+              <span class="action-item-icon">${a.icon}</span>
+              <div class="action-item-body">
+                <div class="action-item-text">${a.text}</div>
+                <button class="btn btn-sm btn-accent" onclick="handleAction(${i})">${a.action}</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+  ` : `
+      <div class="app-card" style="grid-column: span 1;">
+        <div class="app-card-header">
+          <div>
+            <div class="app-card-title">${s.isPatron ? 'Patron için günün özeti' : 'Bu işletme için bugün'}</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">AI Asistan'a sor, scope'a göre cevaplar</div>
+          </div>
+        </div>
+        <div class="app-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="action-item"><span class="action-item-icon">💰</span><div class="action-item-body"><div class="action-item-text">Bugünkü tahmini ciron <strong>${fmtTL(stats.today)}</strong> — ${todayDelta >= 0 ? 'düne göre artış' : 'düne göre düşüş'} (${todayDelta >= 0 ? '+' : ''}${todayDelta.toFixed(1)}%).</div><button class="btn btn-sm btn-accent" onclick="askChatFree('Bugün ne yapayım?')">AI'a sor</button></div></div>
+          <div class="action-item"><span class="action-item-icon">📊</span><div class="action-item-body"><div class="action-item-text">Son 30 günün ortalama günlük cirosu <strong>${fmtTL(last30Avg)}</strong>. Trendinizi inceleyebilirim.</div><button class="btn btn-sm btn-accent" onclick="askChatFree('Son 30 gün performansım nasıl?')">Analiz et</button></div></div>
+          <div class="action-item"><span class="action-item-icon">📨</span><div class="action-item-body"><div class="action-item-text">${stats.openInvoices} açık tahsilat var, toplam <strong>${fmtTL(stats.openTotal)}</strong>.</div><button class="btn btn-sm btn-accent" onclick="navigate('payments')">Tahsilata git</button></div></div>
+          <div class="action-item"><span class="action-item-icon">🌦️</span><div class="action-item-body"><div class="action-item-text">${s.isPatron ? 'Hava etkisi bayilerin için farklı — analiz isteyebilirsin.' : `Yağmurlu hava bu sektörü ${SECTORS[s.business.sector].weatherImpact.yağmurlu >= 0 ? '+' : ''}${SECTORS[s.business.sector].weatherImpact.yağmurlu}% etkiliyor.`}</div><button class="btn btn-sm btn-accent" onclick="askChatFree('Yağmurlu hava nasıl etkiler?')">Detay</button></div></div>
+        </div>
+      </div>
+  `;
+
+  $view().innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-label">Bugünkü tahmini ciro</div>
+        <div class="stat-card-value">${fmtTL(stats.today)}</div>
+        <div class="stat-card-delta ${todayDelta >= 0 ? 'positive' : 'negative'}">
+          ${todayDelta >= 0 ? '↑' : '↓'} %${Math.abs(todayDelta).toFixed(1)} düne göre
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Son 7 gün</div>
+        <div class="stat-card-value">${fmtTL(stats.last7)}</div>
+        <div class="stat-card-delta neutral">Günlük ort. ${fmtTL(last7Avg)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Son 30 gün</div>
+        <div class="stat-card-value">${fmtTL(stats.last30)}</div>
+        <div class="stat-card-delta neutral">Günlük ort. ${fmtTL(last30Avg)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Açık tahsilat</div>
+        <div class="stat-card-value">${fmtTL(stats.openTotal)}</div>
+        <div class="stat-card-delta negative">${stats.openInvoices} fatura</div>
+      </div>
     </div>
 
-    <!-- Cash flow chart -->
+    <div class="app-grid-2">
+      ${actionWidget}
+      ${widgetB}
+    </div>
+
     <div class="app-card" style="margin-top: 14px;">
       <div class="app-card-header">
         <div>
-          <div class="app-card-title">Nakit tahmini · 60 gün</div>
-          <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">Son 30 gün gerçekleşen + 30 gün AI tahmini</div>
+          <div class="app-card-title">Nakit akışı · 60 gün</div>
+          <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">Son 30 gün günlük + 30 gün AI tahmini</div>
         </div>
-        <span class="badge badge-warning">⚠ 18 May'da açık riski</span>
+        <span class="badge badge-info">${s.isPatron ? `${s.patron.businessIds.length} bayi birleşik` : SECTORS[s.business.sector].label}</span>
       </div>
       <div class="app-card-body">
         <div style="height: 280px; position: relative;">
@@ -836,20 +1015,19 @@ function renderDashboard() {
       </div>
     </div>
 
-    <!-- AI Asistan kısayol -->
     <div class="app-card" style="margin-top: 14px;">
       <div class="app-card-header">
         <div>
           <div class="app-card-title">İşletmene sor — AI Asistan</div>
-          <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">${APP.state.plan === 'pro' ? 'Sınırsız sorgu' : `${APP.state.aiQueriesUsed}/${APP.state.aiQuotaFree} sorgu kullanıldı bugün`}</div>
+          <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">${APP.state.plan === 'pro' ? 'Sınırsız sorgu' : `${APP.state.aiQueriesUsed}/${APP.state.aiQuotaFree} sorgu kullanıldı`}</div>
         </div>
         <button class="btn btn-sm btn-outline" onclick="navigate('ai')">Asistan'ı aç →</button>
       </div>
       <div class="app-card-body" style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="quickAsk('en-riskli')">En riskli müşterim kim?</button>
-        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="quickAsk('bu-hafta')">Bu hafta ne yapmalıyım?</button>
-        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="quickAsk('nakit-durumu')">Nakit durumum nasıl?</button>
-        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="quickAsk('musteri-segment')">Müşterilerimi segmentlere ayır</button>
+        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="askChatFree('Son 25 günün cirom ne kadar?')">Son 25 gün ciro?</button>
+        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="askChatFree('Mayıs 2024 cirom ne kadar?')">Mayıs 2024 ciro?</button>
+        <button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="askChatFree('En iyi ayım hangisi?')">En iyi ay?</button>
+        ${s.isPatron ? `<button class="chat-suggestion-chip" style="flex: 0 0 auto; width: auto;" onclick="askChatFree('Bayilerimi karşılaştır')">Bayilerimi kıyasla</button>` : ''}
       </div>
     </div>
   `;
@@ -862,10 +1040,10 @@ function renderDashboard() {
     APP.charts.cashflow = new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
-        labels: cashFlow.labels,
+        labels: cashflowScoped.labels,
         datasets: [
-          { label: 'Gerçekleşen', data: cashFlow.actual, borderColor: c.actual, backgroundColor: c.actualBg, tension: 0.35, fill: true, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 },
-          { label: 'AI Tahmini', data: cashFlow.predicted, borderColor: c.predicted, backgroundColor: c.predictedBg, borderDash: [6,4], tension: 0.35, fill: true, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }
+          { label: 'Gerçekleşen', data: cashflowScoped.actual, borderColor: c.actual, backgroundColor: c.actualBg, tension: 0.35, fill: true, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 },
+          { label: 'AI Tahmini', data: cashflowScoped.predicted, borderColor: c.predicted, backgroundColor: c.predictedBg, borderDash: [6,4], tension: 0.35, fill: true, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }
         ]
       },
       options: {
@@ -1102,20 +1280,56 @@ function renderPayments() {
     </div>
 
     ${tab === 'overdue' && messageDrafts['Mehmet Tan'] ? `
-      <div class="app-card" style="margin-top: 14px;">
+      <div class="app-card" style="margin-top: 14px;" id="msg-draft-card">
         <div class="app-card-header">
           <div>
             <div class="app-card-title">📨 AI'nın hazırladığı hatırlatma mesajı (Mehmet Tan)</div>
-            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;">Ton: ${messageDrafts['Mehmet Tan'].tone} · Onayınla gönderilir</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;" id="msg-draft-tone">Ton: ${messageDrafts['Mehmet Tan'].tone} · Onayınla gönderilir</div>
           </div>
+          <span class="badge badge-info" id="msg-draft-badge">cache</span>
         </div>
         <div class="app-card-body">
-          <div style="background: rgba(0,200,150,0.06); border: 1px solid rgba(0,200,150,0.15); padding: 14px; border-radius: 12px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">${messageDrafts['Mehmet Tan'].text}</div>
-          <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-            <button class="btn btn-sm btn-success" onclick="sendReminder('Mehmet Tan')">${I.check} Onayla & Gönder</button>
-            <button class="btn btn-sm btn-outline">Düzenle</button>
-            <button class="btn btn-sm btn-outline">Tonu yumuşat</button>
+          <div id="msg-draft-text" style="background: rgba(0,200,150,0.06); border: 1px solid rgba(0,200,150,0.15); padding: 14px; border-radius: 12px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">${messageDrafts['Mehmet Tan'].text}</div>
+
+          <div style="margin-top: 14px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--odeal-muted); font-weight: 600; margin-bottom: 8px;">AI ton ayarı (Gemini ile yeniden yaz)</div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha yumuşak ton kullan, anlayışlı yaklaş, suçlayıcı olma')">🌸 Yumuşat</button>
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha sert ve kararlı bir ton, ödemenin gecikmesinin ciddiyeti vurgulansın')">⚡ Sertleştir</button>
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha resmi, profesyonel bir dil kullan')">🎩 Resmi</button>
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha samimi, arkadaşça bir ton, sanki yıllardır tanışıyormuşuz gibi')">💬 Samimi</button>
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha kısa, 3 satırı geçme, doğrudan ol')">✂️ Kısalt</button>
+              <button class="btn btn-sm btn-outline" onclick="rewriteDraftTone('Daha detaylı yaz, ödeme yöntemleri ve müşteri ile geçmiş ilişkiyi de anımsat')">📝 Detaylandır</button>
+            </div>
           </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);">
+            <button class="btn btn-sm btn-success" onclick="sendReminder('Mehmet Tan')">${I.check} Onayla & Gönder</button>
+            <button class="btn btn-sm btn-outline" onclick="resetDraft()">↻ Orijinal taslağa dön</button>
+            <button class="btn btn-sm btn-outline" onclick="showToast('Kopyalandı','success')">📋 Kopyala</button>
+          </div>
+
+          <details style="margin-top: 14px;">
+            <summary style="cursor: pointer; font-size: 12px; color: var(--odeal-muted); padding: 6px 0;">📋 Mehmet Tan ile geçmiş ilişki ve geri bildirimler</summary>
+            <div style="padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-top: 8px; font-size: 12.5px; line-height: 1.6;">
+              <div style="margin-bottom: 8px;"><strong>📊 Müşteri profili:</strong></div>
+              <ul style="margin: 0 0 12px 18px; color: var(--odeal-muted); padding: 0;">
+                <li>Yıllık harcama: 12.500₺ (TOP 10'da)</li>
+                <li>Önceki 22 ödemesinde 21 zamanında, 1 gecikmiş (bu)</li>
+                <li>Son 3 ödemenin ortalama süresi: vadeden 2 gün önce</li>
+              </ul>
+              <div style="margin-bottom: 8px;"><strong>💬 Son geri bildirimler:</strong></div>
+              <ul style="margin: 0 0 12px 18px; padding: 0;">
+                <li style="color: #f87171;">"Ürün geç geldi, bu sefer mağdur oldum." — 15 Nisan</li>
+                <li style="color: var(--odeal-muted);">"Her zamanki gibi memnun kaldım, teşekkürler." — 8 Mart</li>
+                <li style="color: #00c896;">"Ayşe Hanım çok ilgili, 5 yıldız." — 12 Şubat</li>
+              </ul>
+              <div style="margin-bottom: 8px;"><strong>🤖 AI yorumu:</strong></div>
+              <div style="color: var(--odeal-muted);">
+                Müşteri normalde sadık ve düzenli ödeme yapıyor. Son şikâyet metninde olumsuz duygu var (sentiment skor: -0.62). Bu gecikme bir <em>tepki</em> olabilir — sert ton riskli, yumuşak başlamak daha akıllı.
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     ` : ''}
@@ -1129,6 +1343,65 @@ function setPaymentTab(t) {
 
 function sendReminder(name) {
   showToast(`✓ ${name}'a WhatsApp hatırlatma gönderildi`, 'success');
+}
+
+// AI ton rewriter — Gemini ile mevcut taslağı yeniden yaz
+async function rewriteDraftTone(toneInstruction) {
+  const textEl = document.getElementById('msg-draft-text');
+  const badgeEl = document.getElementById('msg-draft-badge');
+  const toneEl = document.getElementById('msg-draft-tone');
+  if (!textEl) return;
+
+  const original = textEl.textContent;
+  const previousHtml = textEl.innerHTML;
+
+  // Loading
+  badgeEl.textContent = 'Gemini düşünüyor...';
+  badgeEl.className = 'badge badge-warning';
+  textEl.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> <em style="color:var(--odeal-muted); margin-left:8px; font-size:12px;">Yeniden yazılıyor…</em>`;
+
+  try {
+    if (typeof rewriteMessageTone === 'function') {
+      const result = await rewriteMessageTone(original, toneInstruction);
+      if (result && result.text) {
+        // Strip HTML if Gemini gave any
+        const cleanText = result.text.replace(/<[^>]+>/g, '').trim();
+        textEl.textContent = cleanText;
+        if (badgeEl) {
+          badgeEl.textContent = '✓ Gemini ile yeniden yazıldı';
+          badgeEl.className = 'badge badge-success';
+        }
+        if (toneEl) toneEl.textContent = `Ton: ${toneInstruction.split(',')[0].toLowerCase()} · Yeniden üretildi`;
+        showToast('Mesaj yeniden yazıldı', 'success');
+        return;
+      }
+    }
+    // Fallback
+    textEl.innerHTML = previousHtml;
+    badgeEl.textContent = 'Gemini erişilemedi';
+    badgeEl.className = 'badge badge-warning';
+    showToast('Gemini şu an erişilemiyor — orijinal mesaj korundu');
+  } catch (e) {
+    console.warn(e);
+    textEl.innerHTML = previousHtml;
+    badgeEl.textContent = 'Hata';
+    badgeEl.className = 'badge badge-danger';
+  }
+}
+
+function resetDraft() {
+  const textEl = document.getElementById('msg-draft-text');
+  const badgeEl = document.getElementById('msg-draft-badge');
+  const toneEl = document.getElementById('msg-draft-tone');
+  if (textEl && messageDrafts['Mehmet Tan']) {
+    textEl.textContent = messageDrafts['Mehmet Tan'].text;
+    if (badgeEl) {
+      badgeEl.textContent = 'cache';
+      badgeEl.className = 'badge badge-info';
+    }
+    if (toneEl) toneEl.textContent = `Ton: ${messageDrafts['Mehmet Tan'].tone} · Onayınla gönderilir`;
+    showToast('Orijinal taslağa döndün');
+  }
 }
 
 // ============= VIEW: CAMPAIGNS (Pro) =============
@@ -1865,88 +2138,83 @@ function renderModule(id) {
   `;
 }
 
-function askModule(moduleId, promptIndex) {
+async function askModule(moduleId, promptIndex) {
   const m = AI_MODULES.find(x => x.id === moduleId);
   if (!m) return;
   const p = m.prompts[promptIndex];
   if (!p) return;
-
-  const out = document.getElementById('module-output');
-  if (!out) return;
-
-  // Step 1: Show user question + typing dots
-  out.innerHTML = `
-    <div class="module-msg user fade-in">${p.q}</div>
-    <div class="module-msg ai fade-in">
-      <div class="module-msg-header">
-        <span style="font-size: 14px;">${m.iconEmoji}</span>
-        <strong style="color: var(--mod-color);">${m.label}</strong>
-        <span class="typing-dots"><span></span><span></span><span></span></span>
-      </div>
-    </div>
-  `;
-  out.scrollTop = out.scrollHeight;
-
-  // Step 2: Replace typing dots with response after delay
-  setTimeout(() => {
-    out.innerHTML = `
-      <div class="module-msg user fade-in">${p.q}</div>
-      <div class="module-msg ai fade-in">
-        <div class="module-msg-header">
-          <span style="font-size: 14px;">${m.iconEmoji}</span>
-          <strong style="color: var(--mod-color);">${m.label}</strong>
-          <span style="font-size: 10px; color: var(--odeal-muted); margin-left: auto;">${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-        <div class="module-msg-body">${p.a}</div>
-        <div class="module-msg-actions">
-          <button class="btn-tiny" onclick="showToast('Kopyalandı','success')">📋 Kopyala</button>
-          <button class="btn-tiny" onclick="showToast('Cevap kaydedildi','success')">⭐ Kaydet</button>
-          <button class="btn-tiny" onclick="askModule('${moduleId}', ${promptIndex})">↻ Yeniden üret</button>
-        </div>
-      </div>
-    `;
-    out.scrollTop = out.scrollHeight;
-  }, 800);
+  await runModuleQuery(m, p.q, p.a);
 }
 
-function askModuleFreeform(moduleId) {
+async function askModuleFreeform(moduleId) {
   const input = document.getElementById('module-input');
   if (!input || !input.value.trim()) return;
   const m = AI_MODULES.find(x => x.id === moduleId);
   if (!m) return;
   const q = input.value.trim();
   input.value = '';
+  await runModuleQuery(m, q, null);
+}
 
+async function runModuleQuery(m, question, fallbackAnswer) {
   const out = document.getElementById('module-output');
   if (!out) return;
 
+  // Step 1: typing
   out.innerHTML = `
-    <div class="module-msg user fade-in">${q}</div>
+    <div class="module-msg user fade-in">${question}</div>
     <div class="module-msg ai fade-in">
       <div class="module-msg-header">
         <span style="font-size: 14px;">${m.iconEmoji}</span>
         <strong style="color: var(--mod-color);">${m.label}</strong>
         <span class="typing-dots"><span></span><span></span><span></span></span>
+        <span style="font-size: 10px; color: var(--odeal-muted); margin-left: 6px;">Gemini ile düşünüyor…</span>
       </div>
     </div>
   `;
+  out.scrollTop = out.scrollHeight;
 
-  setTimeout(() => {
-    out.innerHTML = `
-      <div class="module-msg user fade-in">${q}</div>
-      <div class="module-msg ai fade-in">
-        <div class="module-msg-header">
-          <span style="font-size: 14px;">${m.iconEmoji}</span>
-          <strong style="color: var(--mod-color);">${m.label}</strong>
-          <span style="font-size: 10px; color: var(--odeal-muted); margin-left: auto;">${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-        <div class="module-msg-body">
-          Sorunu aldım: "<em>${q}</em>"<br><br>
-          Bu modülün şu an mock cevaplarıyla çalıştığını hatırlatayım — backend Gemini bağlandığında özel cevap üretilecek.<br><br>
-          Şimdilik <strong>yukarıdaki hazır sorulardan</strong> birini deneyebilir veya ${m.label.toLowerCase()} alanında istediğin başka bir konuyu test edebilirsin.
-        </div>
+  // Step 2: Try Gemini
+  let aiText = null;
+  let source = 'fallback';
+  try {
+    if (typeof askGeminiForModule === 'function') {
+      const result = await askGeminiForModule(m.id, question);
+      if (result && result.text) {
+        aiText = result.text;
+        source = 'gemini';
+      }
+    }
+  } catch (e) {
+    console.warn('[Module] Gemini error:', e);
+  }
+
+  // Fallback to static answer
+  if (!aiText) {
+    aiText = fallbackAnswer || `<em>"${question}"</em> sorgun için Gemini şu an erişilemiyor.<br><br>Mock cevap için yukarıdaki hazır sorulardan birini deneyebilirsin.`;
+  }
+
+  // Step 3: render final
+  const sourceBadge = source === 'gemini'
+    ? '<span style="font-size:10px; padding:2px 6px; background: rgba(0,200,150,0.15); color:#00c896; border-radius:4px; margin-left:6px;">✓ Gemini</span>'
+    : '<span style="font-size:10px; padding:2px 6px; background: rgba(255,255,255,0.06); color:var(--odeal-muted); border-radius:4px; margin-left:6px;">cache</span>';
+
+  out.innerHTML = `
+    <div class="module-msg user fade-in">${question}</div>
+    <div class="module-msg ai fade-in">
+      <div class="module-msg-header">
+        <span style="font-size: 14px;">${m.iconEmoji}</span>
+        <strong style="color: var(--mod-color);">${m.label}</strong>
+        ${sourceBadge}
+        <span style="font-size: 10px; color: var(--odeal-muted); margin-left: auto;">${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
-    `;
-    out.scrollTop = out.scrollHeight;
-  }, 700);
+      <div class="module-msg-body">${aiText}</div>
+      <div class="module-msg-actions">
+        <button class="btn-tiny" onclick="showToast('Kopyalandı','success')">📋 Kopyala</button>
+        <button class="btn-tiny" onclick="showToast('Cevap kaydedildi','success')">⭐ Kaydet</button>
+        <button class="btn-tiny" onclick="runModuleQuery(AI_MODULES.find(x=>x.id==='${m.id}'), ${JSON.stringify(question).replace(/"/g, '&quot;')}, null)">↻ Yeniden üret</button>
+      </div>
+    </div>
+  `;
+  out.scrollTop = out.scrollHeight;
 }
