@@ -40,13 +40,9 @@
       </a>
     </div>
 
-    <div class="sidebar-business">
-      <div class="sidebar-business-avatar">👩</div>
-      <div style="min-width: 0;">
-        <div class="sidebar-business-name">Ayşe'nin Butiği</div>
-        <div class="sidebar-business-meta">Kadıköy · POS aktif</div>
-      </div>
-    </div>
+    <button id="sidebar-business" class="sidebar-business sidebar-business-btn" onclick="openScopeModal()" aria-label="Hesap değiştir">
+      <!-- içerik JS ile doldurulur -->
+    </button>
 
     <div class="sidebar-section">Menü</div>
     <nav id="sidebar-nav" class="sidebar-nav"></nav>
@@ -88,8 +84,24 @@
 
 <div id="toast-container" class="toast-container"></div>
 
+<!-- ========== SCOPE MODAL ========== -->
+<div id="scope-modal" class="scope-modal" aria-hidden="true">
+  <div class="scope-modal-backdrop" onclick="closeScopeModal()"></div>
+  <div class="scope-modal-card">
+    <div class="scope-modal-header">
+      <div>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Hesap Seç</h2>
+        <p style="margin: 4px 0 0; font-size: 12px; color: var(--odeal-muted);">Demo: kayıt yok, herhangi birini seç ve devam et</p>
+      </div>
+      <button class="scope-modal-close" onclick="closeScopeModal()" aria-label="Kapat">✕</button>
+    </div>
+    <div class="scope-modal-body" id="scope-modal-body"></div>
+  </div>
+</div>
+
 <script src="data.js"></script>
 <script src="app-data.js"></script>
+<script src="app-patrons.js"></script>
 <script src="app.js"></script>
 
 </body>

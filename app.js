@@ -8,7 +8,11 @@ const APP = {
     customerSegment: 'all',
     aiHistory: [],
     aiQueriesUsed: 4,
-    aiQuotaFree: 20
+    aiQuotaFree: 20,
+    // SCOPE: hangi patron + bayi üzerinden bakıyoruz?
+    currentPatronId: 'ayse',           // varsayılan
+    currentBusinessId: 'ayse-butik-kadikoy', // null = patron modu
+    isPatronMode: false
   },
   charts: {}
 };
@@ -319,6 +323,7 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
   loadState();
   applyThemeOnLoad();
+  renderSidebarBusiness();
   buildSidebar();
   buildTopbarRight();
   bindGlobalEvents();
@@ -326,12 +331,184 @@ function init() {
   navigate(hash);
 }
 
+// ============= SIDEBAR BUSINESS DISPLAY =============
+function renderSidebarBusiness() {
+  const host = document.getElementById('sidebar-business');
+  if (!host) return;
+  const s = currentScope();
+  if (!s.patron) return;
+
+  if (s.isPatron) {
+    host.innerHTML = `
+      <div class="sidebar-business-avatar" style="background: linear-gradient(135deg, ${s.patron.color}, ${s.patron.color}aa);">${s.patron.avatar}</div>
+      <div style="min-width: 0; flex: 1;">
+        <div class="sidebar-business-name">${s.patron.fullName}</div>
+        <div class="sidebar-business-meta">${s.patron.businessIds.length} bayi <span class="scope-mode-badge patron">PATRON</span></div>
+      </div>
+    `;
+  } else {
+    const sec = SECTORS[s.business.sector];
+    host.innerHTML = `
+      <div class="sidebar-business-avatar" style="background: linear-gradient(135deg, ${s.patron.color}, ${s.patron.color}aa);">${sec.icon}</div>
+      <div style="min-width: 0; flex: 1;">
+        <div class="sidebar-business-name">${s.business.shortName}</div>
+        <div class="sidebar-business-meta">${sec.label} · ${s.business.location} <span class="scope-mode-badge kobi">KOBİ</span></div>
+      </div>
+    `;
+  }
+}
+
+// ============= SCOPE MODAL =============
+function openScopeModal() {
+  const modal = document.getElementById('scope-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  renderPatronGrid();
+}
+
+function closeScopeModal() {
+  const modal = document.getElementById('scope-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function renderPatronGrid() {
+  const body = document.getElementById('scope-modal-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="modal-step-title">5 Patron · Tek tıkla geç</div>
+    <div class="patron-grid">
+      ${PATRONS.map(p => `
+        <button class="patron-card" onclick="renderPatronDetail('${p.id}')" style="--patron-color: ${p.color};">
+          <div class="patron-card-avatar">${p.avatar}</div>
+          <div class="patron-card-name">${p.fullName}</div>
+          <div class="patron-card-meta">${p.note}</div>
+          <div class="patron-card-bio">${p.bio}</div>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderPatronDetail(patronId) {
+  const p = PATRONS.find(x => x.id === patronId);
+  if (!p) return;
+  const body = document.getElementById('scope-modal-body');
+  if (!body) return;
+  const businesses = p.businessIds.map(id => BUSINESSES[id]);
+  body.innerHTML = `
+    <button class="modal-back-btn" onclick="renderPatronGrid()">← Tüm patronlar</button>
+
+    <div class="patron-detail-header" style="--patron-color: ${p.color};">
+      <div style="font-size: 36px;">${p.avatar}</div>
+      <div style="flex: 1;">
+        <div style="font-size: 18px; font-weight: 700;">${p.fullName}</div>
+        <div style="font-size: 12.5px; color: var(--odeal-muted); margin-top: 2px;">${p.bio}</div>
+      </div>
+    </div>
+
+    <button class="patron-mode-btn" onclick="enterPatronMode('${p.id}')" style="--patron-color: ${p.color};">
+      <div class="patron-mode-btn-icon">👁️</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; font-size: 14.5px;">Tüm bayilerimi görüntüle</div>
+        <div style="font-size: 12px; color: var(--odeal-muted); margin-top: 2px;">${p.businessIds.length} bayi · Patron modu · Birleşik görüntü</div>
+      </div>
+      <span style="color: var(--patron-color); font-size: 18px;">→</span>
+    </button>
+
+    <div class="scope-divider">VEYA TEK BAYİ SEÇ</div>
+
+    <div class="business-list" style="--patron-color: ${p.color};">
+      ${businesses.map(b => {
+        const sec = SECTORS[b.sector];
+        return `
+          <button class="business-row" onclick="enterBusinessMode('${p.id}', '${b.id}')" style="--patron-color: ${p.color};">
+            <div class="business-row-icon">${sec.icon}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div class="business-row-name">${b.shortName}</div>
+              <div class="business-row-meta">${sec.label} · ${b.location} · ortalama aylık ${b.baseMonthly.toLocaleString('tr-TR')}₺</div>
+            </div>
+            <span class="business-row-arrow">→</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function enterPatronMode(patronId) {
+  APP.state.currentPatronId = patronId;
+  APP.state.currentBusinessId = null;
+  APP.state.isPatronMode = true;
+  saveScope();
+  closeScopeModal();
+  renderSidebarBusiness();
+  const p = PATRONS.find(x => x.id === patronId);
+  showToast(`👁️ ${p.fullName} · Patron Modu (${p.businessIds.length} bayi)`, 'success');
+  // AI history sıfırla — yeni scope, yeni context
+  APP.state.aiHistory = [];
+  navigate(APP.state.view);
+}
+
+function enterBusinessMode(patronId, businessId) {
+  APP.state.currentPatronId = patronId;
+  APP.state.currentBusinessId = businessId;
+  APP.state.isPatronMode = false;
+  saveScope();
+  closeScopeModal();
+  renderSidebarBusiness();
+  const b = BUSINESSES[businessId];
+  showToast(`🏪 ${b.shortName}'na geçildi`, 'success');
+  APP.state.aiHistory = [];
+  navigate(APP.state.view);
+}
+
 function loadState() {
   APP.state.plan = localStorage.getItem('odeal_plan') || 'free';
+  // Scope state
+  const savedScope = localStorage.getItem('odeal_scope');
+  if (savedScope) {
+    try {
+      const s = JSON.parse(savedScope);
+      if (s.currentPatronId && PATRONS && PATRONS.find(p => p.id === s.currentPatronId)) {
+        APP.state.currentPatronId = s.currentPatronId;
+        APP.state.currentBusinessId = s.currentBusinessId;
+        APP.state.isPatronMode = !!s.isPatronMode;
+      }
+    } catch(e) {}
+  }
 }
 
 function savePlan() {
   localStorage.setItem('odeal_plan', APP.state.plan);
+}
+
+function saveScope() {
+  localStorage.setItem('odeal_scope', JSON.stringify({
+    currentPatronId: APP.state.currentPatronId,
+    currentBusinessId: APP.state.currentBusinessId,
+    isPatronMode: APP.state.isPatronMode
+  }));
+}
+
+// ============= SCOPE HELPERS =============
+function currentScope() {
+  return {
+    patronId: APP.state.currentPatronId,
+    businessId: APP.state.currentBusinessId,
+    isPatron: APP.state.isPatronMode,
+    patron: PATRONS.find(p => p.id === APP.state.currentPatronId),
+    business: APP.state.currentBusinessId ? BUSINESSES[APP.state.currentBusinessId] : null
+  };
+}
+
+function scopeLabel() {
+  const s = currentScope();
+  if (!s.patron) return '';
+  if (s.isPatron) return `${s.patron.fullName} · Patron Modu`;
+  return s.business ? s.business.shortName : s.patron.fullName;
 }
 
 // ============= THEME =============
@@ -556,7 +733,11 @@ function healthBar(score) {
 
 // ============= VIEW: DASHBOARD =============
 function renderDashboard() {
-  setTopbarTitle('Bugün', `Günaydın Ayşe Hanım — ${todaysActions.length} öneriniz var`);
+  const s = currentScope();
+  const greeting = s.isPatron
+    ? `${s.patron.fullName} · ${s.patron.businessIds.length} bayinizin özeti`
+    : `Günaydın ${s.patron?.fullName.split(' ')[0] || ''} — ${todaysActions.length} öneriniz var`;
+  setTopbarTitle('Bugün', greeting);
   clearChart('cashflow');
 
   const todayDelta = (todayStats.todaySales / todayStats.yesterdaySales - 1) * 100;
@@ -1086,19 +1267,34 @@ function renderWhatsApp() {
 
 // ============= VIEW: AI ASİSTAN =============
 function renderAI() {
-  setTopbarTitle('AI Asistan', APP.state.plan === 'pro' ? 'Sınırsız sorgu — Pro' : `${APP.state.aiQueriesUsed}/${APP.state.aiQuotaFree} sorgu kullanıldı`);
+  const s = currentScope();
+  const subtitle = s.isPatron
+    ? `${s.patron.fullName} · Patron · ${APP.state.plan === 'pro' ? 'Sınırsız' : `${APP.state.aiQueriesUsed}/${APP.state.aiQuotaFree}`}`
+    : `${s.business?.shortName || 'KOBİ'} · ${APP.state.plan === 'pro' ? 'Sınırsız' : `${APP.state.aiQueriesUsed}/${APP.state.aiQuotaFree}`}`;
+  setTopbarTitle('AI Asistan', subtitle);
 
-  const messages = APP.state.aiHistory.length > 0 ? APP.state.aiHistory : [
-    { role: 'ai', text: `Günaydın Ayşe Hanım! 👋<br><br>Bugün için <strong>${todaysActions.length} öncelikli aksiyon</strong> hazırladım. Sorularını sorabilir, yan paneldeki örnek soruları tıklayabilirsin.` }
-  ];
+  // İlk mesaj scope'a göre değişir
+  const welcomeMsg = s.isPatron
+    ? `Merhaba ${s.patron.fullName}! 👋<br><br>Şu an <strong>Patron Modu</strong>'ndasın — <strong>${s.patron.businessIds.length} bayinin</strong> verisine erişim var. Tüm bayileri kıyasla, belirli bir bayi sor, ay-yıl bazında ciro sor — hepsi mümkün.`
+    : `Merhaba 👋<br><br><strong>${s.business.shortName}</strong> verilerin üzerinden cevap veriyorum. Geçmiş ay cirosu, hava etkisi, müşteri analizi — sorabilirsin.`;
 
-  const suggestions = [
-    { key: 'en-riskli', label: 'En riskli müşterim kim?' },
-    { key: 'bu-hafta', label: 'Bu hafta ne yapmalıyım?' },
-    { key: 'nakit-durumu', label: 'Nakit durumum nasıl?' },
-    { key: 'musteri-segment', label: 'Müşterilerimi segmentlere ayır' },
-    { key: 'ne-satayim', label: 'Bu hafta ne satmalıyım?' },
-    { key: 'rekabetcilik', label: 'Rakiplerime göre nasılım?' }
+  const messages = APP.state.aiHistory.length > 0 ? APP.state.aiHistory : [{ role: 'ai', text: welcomeMsg }];
+
+  // Scope'a göre öneriler
+  const suggestions = s.isPatron ? [
+    { type: 'free', label: `Mayıs 2024'te toplam ne kadar sattık?` },
+    { type: 'free', label: 'Bayilerimi karşılaştır' },
+    { type: 'free', label: 'En iyi ayım hangisi?' },
+    { type: 'free', label: `${BUSINESSES[s.patron.businessIds[0]].shortName} Mart 2025 nedir?` },
+    { type: 'free', label: 'Yağmurlu hava bayilerimi nasıl etkiler?' },
+    { type: 'free', label: 'Toplam personel sayım?' }
+  ] : [
+    { type: 'free', label: `Mayıs 2024'te ne kadar sattık?` },
+    { type: 'free', label: '2024 yıllık ciromuz nedir?' },
+    { type: 'free', label: 'En iyi ayım hangisi?' },
+    { type: 'free', label: 'Yağmurlu hava nasıl etkiler?' },
+    { type: 'free', label: 'En çok satan ürünüm?' },
+    { type: 'key', key: 'en-riskli', label: 'En riskli müşterim kim?' }
   ];
 
   const remaining = APP.state.aiQuotaFree - APP.state.aiQueriesUsed;
@@ -1123,9 +1319,10 @@ function renderAI() {
           : `<div class="chat-quota ${remaining < 5 ? 'warn' : ''}">${remaining} sorgu kaldı bugün · <a href="javascript:setPlan('pro')" style="color:inherit; text-decoration:underline;">Pro'ya geç</a></div>`
         }
         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--odeal-muted); margin-bottom: 10px; font-weight: 600;">Önerilen sorular</div>
-        ${suggestions.map(s => `
-          <button class="chat-suggestion-chip" onclick="quickAsk('${s.key}')">${s.label}</button>
-        `).join('')}
+        ${suggestions.map(sg => sg.type === 'key'
+          ? `<button class="chat-suggestion-chip" onclick="quickAsk('${sg.key}')">${sg.label}</button>`
+          : `<button class="chat-suggestion-chip" onclick="askChatFree('${sg.label.replace(/'/g, "\\'")}')">${sg.label}</button>`
+        ).join('')}
         <div style="margin-top: 18px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 10px; font-size: 11.5px; color: var(--odeal-muted); line-height: 1.5;">
           💡 AI, son 90 günlük POS verini, müşteri iletişimlerini ve dış etkenleri analiz ederek cevap verir.
         </div>
@@ -1162,14 +1359,34 @@ function quickAsk(key) {
   }, 50);
 }
 
+// Yan paneldeki örnek soruları tetiklemek için
+function askChatFree(text) {
+  if (!text) return;
+  if (APP.state.view !== 'ai') {
+    APP.state.aiHistory.push({ role: 'user', text });
+    APP.state.aiHistory.push({ role: 'ai', text: generateScopeAwareResponse(text) });
+    APP.state.aiQueriesUsed++;
+    navigate('ai');
+    return;
+  }
+  APP.state.aiHistory.push({ role: 'user', text });
+  APP.state.aiHistory.push({ role: 'ai', text: generateScopeAwareResponse(text) });
+  APP.state.aiQueriesUsed++;
+  renderAI();
+  setTimeout(() => {
+    const m = document.getElementById('chat-messages');
+    if (m) m.scrollTop = m.scrollHeight;
+  }, 50);
+}
+
 function sendChat() {
   const input = document.getElementById('chat-input');
   if (!input || !input.value.trim()) return;
   const text = input.value.trim();
   APP.state.aiHistory.push({ role: 'user', text: text });
-  // Mock AI response
-  const mockResponse = `Anlıyorum, "<em>${text}</em>" sorunuzla ilgili POS verinizi analiz ediyorum...<br><br>Bu konuda detaylı bir cevap için yan paneldeki <strong>önerilen sorulardan</strong> birini deneyebilirsiniz.`;
-  APP.state.aiHistory.push({ role: 'ai', text: mockResponse });
+  // Scope-aware response
+  const response = generateScopeAwareResponse(text);
+  APP.state.aiHistory.push({ role: 'ai', text: response });
   APP.state.aiQueriesUsed++;
   input.value = '';
   renderAI();
@@ -1177,6 +1394,255 @@ function sendChat() {
     const m = document.getElementById('chat-messages');
     if (m) m.scrollTop = m.scrollHeight;
   }, 50);
+}
+
+// ============= SCOPE-AWARE AI CHAT GENERATOR =============
+function generateScopeAwareResponse(query) {
+  const s = currentScope();
+  if (!s.patron) return 'Önce bir hesap seç (sol üstten).';
+  const lower = query.toLocaleLowerCase('tr');
+
+  // Selamlama / kısa cevap
+  if (lower.match(/^(merhaba|selam|hey|hi|naber)/)) {
+    if (s.isPatron) {
+      return `Merhaba ${s.patron.fullName} 👋<br><br>Şu an <strong>Patron Modu</strong>'ndasınız — ${s.patron.businessIds.length} bayinizin verisine erişimim var. Hangi bayi veya genel toplam hakkında konuşmak istersiniz?`;
+    }
+    return `Merhaba 👋<br><br>${s.business.shortName} verilerinize bakıyorum. Sorularınız var mı?`;
+  }
+
+  // Ay-yıl pattern + ciro/satış sorgusu
+  const monthYear = extractMonthYear(query);
+  const isRevenueQuery = lower.match(/(satış|ciro|gelir|hasılat|kazanç|para|kazandık|sattık|yaptık|işlem|hacim)/);
+  const isYearlyQuery = lower.match(/(yıllık|yıl boyu|sene|tüm yıl)/) && lower.match(/\b(20\d{2})\b/);
+
+  if (isRevenueQuery && monthYear) {
+    return formatRevenueResponse(query, monthYear);
+  }
+
+  if (isYearlyQuery) {
+    const yearMatch = lower.match(/\b(20\d{2})\b/);
+    if (yearMatch) return formatYearlyResponse(parseInt(yearMatch[1]));
+  }
+
+  // En iyi/en kötü ay sorgusu
+  if (lower.match(/(en iyi ay|hangi ay|en yüksek ay|zirve)/)) {
+    return findBestMonth();
+  }
+
+  // Hava etkisi
+  if (lower.match(/(hava|yağmur|güneş|soğuk|sıcak)/)) {
+    return generateWeatherImpactResponse(lower);
+  }
+
+  // Bayi karşılaştırma (sadece patron mode)
+  if (s.isPatron && lower.match(/(karşılaştır|hangi bayi|en iyi bayi|en kötü bayi|kıyasla)/)) {
+    return comparePatronBusinesses();
+  }
+
+  // Bayi listesi
+  if (s.isPatron && lower.match(/(bayilerim|işletmelerim|hangi bayilerim|kaç bayim)/)) {
+    return listPatronBusinesses();
+  }
+
+  // Personel sorgusu
+  if (lower.match(/(personel|çalışan|kaç kişi)/)) {
+    return generateStaffResponse();
+  }
+
+  // Müşteri sorgusu
+  if (lower.match(/(müşteri sayı|kaç müşteri)/)) {
+    return generateCustomerCountResponse();
+  }
+
+  // En çok satan
+  if (lower.match(/(en çok satan|popüler ürün|hit ürün)/)) {
+    return generateTopProductResponse();
+  }
+
+  // Genel cevap
+  return generateGenericResponse(query);
+}
+
+function formatRevenueResponse(query, monthYear) {
+  const s = currentScope();
+  const targetBusiness = detectBusinessInQuery(query, s.patronId);
+
+  // Patron modu, belirli bayi soruldu
+  if (s.isPatron && targetBusiness) {
+    const rev = getMonthlyRevenue(targetBusiness.id, monthYear.year, monthYear.month);
+    const sec = SECTORS[targetBusiness.sector];
+    return `<strong>${targetBusiness.name}</strong> için ${monthYear.label} cirosu:<br><br>
+      💰 <strong style="font-size:18px; color:var(--odeal-accent);">${rev.toLocaleString('tr-TR')}₺</strong><br><br>
+      ${sec.icon} Sektör: ${sec.label} · 📍 ${targetBusiness.location}<br>
+      🗓 Aktif: ${targetBusiness.activeSince}<br><br>
+      <em style="color:var(--odeal-muted); font-size:12px;">Bu rakam POS işlem verisi + e-fatura kayıtlarından hesaplandı.</em>`;
+  }
+
+  // Patron modu, toplam soruldu
+  if (s.isPatron) {
+    const total = getPatronRevenue(s.patronId, monthYear.year, monthYear.month);
+    const breakdown = s.patron.businessIds.map(bid => {
+      const b = BUSINESSES[bid];
+      const rev = getMonthlyRevenue(bid, monthYear.year, monthYear.month);
+      return { name: b.shortName, rev };
+    }).sort((a, b) => b.rev - a.rev);
+    return `<strong>${s.patron.fullName}</strong> · ${monthYear.label} toplam ciro:<br><br>
+      💰 <strong style="font-size:20px; color:var(--odeal-accent);">${total.toLocaleString('tr-TR')}₺</strong><br><br>
+      <strong>Bayi dağılımı:</strong><br>
+      ${breakdown.map((b, i) => `${i+1}. ${b.name}: <strong>${b.rev.toLocaleString('tr-TR')}₺</strong>`).join('<br>')}<br><br>
+      <em style="color:var(--odeal-muted); font-size:12px;">Belirli bir bayi için sormak istersen ismini yaz.</em>`;
+  }
+
+  // KOBİ modu
+  const rev = getMonthlyRevenue(s.businessId, monthYear.year, monthYear.month);
+  return `<strong>${s.business.shortName}</strong> için ${monthYear.label} cirosu:<br><br>
+    💰 <strong style="font-size:20px; color:var(--odeal-accent);">${rev.toLocaleString('tr-TR')}₺</strong><br><br>
+    📊 Aylık ortalamanın ${rev > s.business.baseMonthly ? '<span style="color:#00c896;">üzerinde ↑</span>' : '<span style="color:#f87171;">altında ↓</span>'}<br>
+    🗓 Sektör: ${SECTORS[s.business.sector].label}`;
+}
+
+function formatYearlyResponse(year) {
+  const s = currentScope();
+  if (s.isPatron) {
+    const total = getPatronYearlyRevenue(s.patronId, year);
+    return `<strong>${s.patron.fullName}</strong> · ${year} yılı toplam ciro:<br><br>
+      💰 <strong style="font-size:20px; color:var(--odeal-accent);">${total.toLocaleString('tr-TR')}₺</strong><br><br>
+      ${s.patron.businessIds.length} bayinin yıllık toplamı.`;
+  }
+  let total = 0;
+  for (let m = 1; m <= 12; m++) total += getMonthlyRevenue(s.businessId, year, m);
+  return `<strong>${s.business.shortName}</strong> · ${year} yılı toplam:<br><br>
+    💰 <strong style="font-size:20px; color:var(--odeal-accent);">${total.toLocaleString('tr-TR')}₺</strong>`;
+}
+
+function findBestMonth() {
+  const s = currentScope();
+  const year = 2025;
+  if (s.isPatron) {
+    let best = { month: 1, rev: 0 };
+    for (let m = 1; m <= 12; m++) {
+      const r = getPatronRevenue(s.patronId, year, m);
+      if (r > best.rev) best = { month: m, rev: r };
+    }
+    return `${year} yılında ${s.patron.fullName} için en iyi ay:<br><br>
+      🏆 <strong>${MONTHS_TR[best.month]} ${year}</strong> — <strong>${best.rev.toLocaleString('tr-TR')}₺</strong><br><br>
+      <em style="color:var(--odeal-muted); font-size:12px;">Sezonsallık + büyüme trendinin birleştiği zirve.</em>`;
+  }
+  let best = { month: 1, rev: 0 };
+  for (let m = 1; m <= 12; m++) {
+    const r = getMonthlyRevenue(s.businessId, year, m);
+    if (r > best.rev) best = { month: m, rev: r };
+  }
+  return `${s.business.shortName} için ${year} en iyi ay:<br><br>
+    🏆 <strong>${MONTHS_TR[best.month]} ${year}</strong> — <strong>${best.rev.toLocaleString('tr-TR')}₺</strong>`;
+}
+
+function generateWeatherImpactResponse(lower) {
+  const s = currentScope();
+  const weatherType = lower.includes('yağmur') ? 'yağmurlu' :
+                      lower.includes('güneş') ? 'güneşli' :
+                      lower.includes('soğuk') ? 'soğuk' :
+                      lower.includes('sıcak') ? 'sıcak' : 'yağmurlu';
+
+  if (s.isPatron) {
+    const items = s.patron.businessIds.map(bid => {
+      const b = BUSINESSES[bid];
+      const sec = SECTORS[b.sector];
+      const impact = sec.weatherImpact[weatherType];
+      const sign = impact > 0 ? '↑' : impact < 0 ? '↓' : '→';
+      const color = impact > 0 ? '#00c896' : impact < 0 ? '#f87171' : '#94a3b8';
+      return { name: b.shortName, sec, impact, sign, color };
+    }).sort((a, b) => b.impact - a.impact);
+
+    return `<strong>${weatherType.charAt(0).toLocaleUpperCase('tr') + weatherType.slice(1)} hava</strong> ${s.patron.fullName} bayilerini nasıl etkiler:<br><br>
+      ${items.map(it => `
+        ${it.sec.icon} <strong>${it.name}</strong>: <span style="color:${it.color}; font-weight:700;">${it.sign} ${Math.abs(it.impact)}%</span><br>
+        <span style="font-size:11.5px; color:var(--odeal-muted);">${it.sec.impactNote}</span><br>
+      `).join('<br>')}
+      <br>💡 <strong>Strateji:</strong> ${weatherType} dönemde ${items[0].name} ön planda, ${items[items.length-1].name} risk altında.`;
+  }
+
+  const sec = SECTORS[s.business.sector];
+  const impact = sec.weatherImpact[weatherType];
+  const sign = impact > 0 ? '↑' : impact < 0 ? '↓' : '→';
+  const color = impact > 0 ? '#00c896' : impact < 0 ? '#f87171' : '#94a3b8';
+  const expectedRev = Math.round(s.business.baseMonthly * (1 + impact/100) / 30);
+  return `<strong>${s.business.shortName}</strong> · ${weatherType} hava etkisi:<br><br>
+    📊 Tahmini etki: <span style="color:${color}; font-weight:700; font-size:18px;">${sign} ${Math.abs(impact)}%</span><br>
+    💰 Günlük gelir tahmini: ~${expectedRev.toLocaleString('tr-TR')}₺<br><br>
+    <em>${sec.impactNote}</em>${impact < -30 ? '<br><br>⚠️ <strong>Yüksek risk:</strong> Önceden tedbir öneriyorum — alternatif kanal/kampanya hazırla.' : ''}`;
+}
+
+function comparePatronBusinesses() {
+  const s = currentScope();
+  if (!s.isPatron) return 'Bu sorgu sadece Patron Modu için anlamlı.';
+  const year = 2025, month = 4; // Nisan 2025 referans
+  const ranked = s.patron.businessIds.map(bid => {
+    const b = BUSINESSES[bid];
+    const rev = getMonthlyRevenue(bid, year, month);
+    return { b, rev };
+  }).sort((a, b) => b.rev - a.rev);
+  return `${s.patron.fullName} · Nisan 2025 bayi performansı:<br><br>
+    ${ranked.map((it, i) => `
+      ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅'} <strong>${it.b.shortName}</strong> (${SECTORS[it.b.sector].label})<br>
+      <span style="color:var(--odeal-muted); font-size:12px;">${it.rev.toLocaleString('tr-TR')}₺ · ${it.b.location}</span><br>
+    `).join('<br>')}
+    <br>💡 <strong>Önerim:</strong> ${ranked[0].b.shortName} en güçlü, oradaki başarılı taktikleri ${ranked[ranked.length-1].b.shortName}'na uyarlayabilirsin.`;
+}
+
+function listPatronBusinesses() {
+  const s = currentScope();
+  if (!s.isPatron) return `Şu an sadece <strong>${s.business.shortName}</strong> verisini görüyorsun. Tüm bayilerini görmek için sol üstten Patron moduna geç.`;
+  return `<strong>${s.patron.fullName}</strong> · ${s.patron.businessIds.length} bayi:<br><br>
+    ${s.patron.businessIds.map(bid => {
+      const b = BUSINESSES[bid];
+      const sec = SECTORS[b.sector];
+      return `${sec.icon} <strong>${b.shortName}</strong> — ${sec.label}, ${b.location}<br><span style="color:var(--odeal-muted); font-size:11.5px;">Aktif: ${b.activeSince} · Aylık ort.: ${b.baseMonthly.toLocaleString('tr-TR')}₺</span>`;
+    }).join('<br><br>')}`;
+}
+
+function generateStaffResponse() {
+  const s = currentScope();
+  if (s.isPatron) {
+    const total = s.patron.businessIds.reduce((sum, bid) => sum + BUSINESSES[bid].staffCount, 0);
+    return `${s.patron.fullName} toplam <strong>${total} personel</strong> ile çalışıyor (${s.patron.businessIds.length} bayide).`;
+  }
+  return `${s.business.shortName}'nda <strong>${s.business.staffCount} personel</strong> çalışıyor.`;
+}
+
+function generateCustomerCountResponse() {
+  const s = currentScope();
+  if (s.isPatron) {
+    const total = s.patron.businessIds.reduce((sum, bid) => sum + BUSINESSES[bid].customers, 0);
+    return `Toplam aktif müşteri sayın: <strong>${total.toLocaleString('tr-TR')}</strong> (${s.patron.businessIds.length} bayide birleşik).`;
+  }
+  return `${s.business.shortName}'nda kayıtlı <strong>${s.business.customers}</strong> aktif müşteri var.`;
+}
+
+function generateTopProductResponse() {
+  const s = currentScope();
+  if (s.isPatron) {
+    return `Bayilerinin en çok satan ürünleri:<br><br>
+      ${s.patron.businessIds.map(bid => {
+        const b = BUSINESSES[bid];
+        return `• <strong>${b.shortName}:</strong> ${b.topProduct}`;
+      }).join('<br>')}`;
+  }
+  return `${s.business.shortName}'nın en çok satan ürünü: <strong>${s.business.topProduct}</strong>.<br><br>${s.business.notable}`;
+}
+
+function generateGenericResponse(query) {
+  const s = currentScope();
+  const ctx = s.isPatron
+    ? `${s.patron.fullName} (Patron Modu, ${s.patron.businessIds.length} bayi)`
+    : `${s.business.shortName} (${SECTORS[s.business.sector].label})`;
+  return `Sorunu aldım: "<em>${query}</em>"<br><br>
+    Şu an <strong>${ctx}</strong> verisi üzerinden cevap veriyorum. Daha spesifik sorabilirsin:<br><br>
+    • <em>"Mayıs 2024'te ne kadar sattık?"</em> — belirli ay cirosu<br>
+    • <em>"En iyi ayım hangisi?"</em> — yıllık zirve<br>
+    • <em>"Yağmurlu hava nasıl etkiler?"</em> — hava etkisi<br>
+    ${s.isPatron ? '• <em>"Bayilerimi karşılaştır"</em> — bayi kıyaslama<br>• <em>"DAP İnşaatta Mayıs 2024 nedir?"</em> — belirli bayi sorgusu' : ''}<br>
+    <em style="color:var(--odeal-muted); font-size:11.5px;">Backend Gemini bağlandığında doğal dil cevapları çok daha akıcı olacak.</em>`;
 }
 
 // ============= VIEW: SETTINGS =============
