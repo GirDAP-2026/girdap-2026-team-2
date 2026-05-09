@@ -1,4 +1,4 @@
-# Ödeal AI Copilot — KOBİ Karar Destek Sistemi
+# Ödeal AI — KOBİ Karar Destek Sistemi
 
 > GirDAP-2026 · Team-2 · Ödeal Case
 
@@ -8,7 +8,7 @@ KOBİ'lerin satış, müşteri ve ödeme süreçlerini yönetmek için **Ödeal 
 
 **"AI'ı yalnızca müşteriyle konuşan bir chatbot olarak değil, satış ve ödeme davranışlarını önceden tahmin eden bir karar destek sistemi olarak konumlandırıyoruz."**
 
-Ödeal POS satışlarına bağlı **bundled** ürün — POS müşterileri için ücretsiz, opsiyonel **Copilot Pro** upsell katmanı.
+Ödeal POS satışlarına bağlı **bundled** ürün — POS müşterileri için ücretsiz, opsiyonel **Pro Versiyon** upsell katmanı.
 
 ## 🧠 Hibrit AI Mimarisi
 

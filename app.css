@@ -888,3 +888,213 @@ body.app-body {
   padding: 3px 8px;
   border-radius: 6px;
 }
+
+/* ===================================================================== */
+/* LIGHT THEME OVERRIDES — APP                                           */
+/* ===================================================================== */
+
+[data-theme="light"] .sidebar {
+  background: #ffffff;
+  border-right-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .sidebar-header { border-bottom-color: rgba(15, 23, 42, 0.08); }
+
+[data-theme="light"] .sidebar-business {
+  background: rgba(15, 23, 42, 0.025);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .nav-item { color: var(--odeal-text); }
+[data-theme="light"] .nav-item:hover { background: rgba(15, 23, 42, 0.04); }
+[data-theme="light"] .nav-item.active {
+  background: rgba(226, 84, 28, 0.1);
+  color: var(--odeal-accent);
+}
+
+[data-theme="light"] .nav-item-badge {
+  background: rgba(226, 84, 28, 0.12);
+  color: var(--odeal-accent);
+}
+[data-theme="light"] .nav-item-badge.lock {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--odeal-muted);
+}
+
+[data-theme="light"] .sidebar-footer { border-top-color: rgba(15, 23, 42, 0.08); }
+
+[data-theme="light"] .plan-toggle {
+  background: rgba(15, 23, 42, 0.025);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .plan-toggle-label,
+[data-theme="light"] .plan-meta { color: var(--odeal-muted); }
+
+[data-theme="light"] .plan-toggle-btns {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .plan-toggle-btn { color: var(--odeal-muted); }
+[data-theme="light"] .plan-toggle-btn.active.free {
+  background: rgba(0, 134, 107, 0.18);
+  color: #00866b;
+}
+[data-theme="light"] .plan-toggle-btn.active.pro {
+  background: rgba(226, 84, 28, 0.18);
+  color: var(--odeal-accent);
+}
+
+[data-theme="light"] .app-topbar {
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .app-topbar-search {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: var(--odeal-text);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+}
+
+[data-theme="light"] .user-pill {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .stat-card,
+[data-theme="light"] .app-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+[data-theme="light"] .stat-card:hover,
+[data-theme="light"] .app-card:hover {
+  border-color: rgba(226, 84, 28, 0.4);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] .app-card-header { border-bottom-color: rgba(15, 23, 42, 0.08); }
+[data-theme="light"] .app-card-title { color: var(--odeal-text); }
+
+[data-theme="light"] .app-table thead th {
+  border-bottom-color: rgba(15, 23, 42, 0.1);
+  color: var(--odeal-muted);
+}
+[data-theme="light"] .app-table tbody td { border-bottom-color: rgba(15, 23, 42, 0.06); color: var(--odeal-text); }
+[data-theme="light"] .app-table tbody tr:hover { background: rgba(15, 23, 42, 0.025); }
+
+[data-theme="light"] .action-item {
+  background: rgba(15, 23, 42, 0.025);
+  border-color: rgba(15, 23, 42, 0.06);
+}
+[data-theme="light"] .action-item:hover {
+  background: rgba(226, 84, 28, 0.04);
+  border-color: rgba(226, 84, 28, 0.3);
+}
+
+[data-theme="light"] .segment-tab {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: var(--odeal-text);
+}
+[data-theme="light"] .segment-tab:hover { border-color: rgba(226, 84, 28, 0.4); }
+[data-theme="light"] .segment-tab.active {
+  background: rgba(226, 84, 28, 0.1);
+  border-color: var(--odeal-accent);
+  color: var(--odeal-accent);
+}
+
+[data-theme="light"] .badge-muted { background: rgba(15, 23, 42, 0.06); color: var(--odeal-muted); }
+[data-theme="light"] .badge-info   { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+[data-theme="light"] .badge-success { background: rgba(0, 134, 107, 0.15); color: #00866b; }
+[data-theme="light"] .badge-warning { background: rgba(217, 119, 6, 0.15); color: #d97706; }
+[data-theme="light"] .badge-danger  { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+[data-theme="light"] .badge-accent  { background: rgba(226, 84, 28, 0.12); color: var(--odeal-accent); }
+
+[data-theme="light"] .health-bar { background: rgba(15, 23, 42, 0.08); }
+
+[data-theme="light"] .btn-outline {
+  border-color: rgba(15, 23, 42, 0.15);
+  color: var(--odeal-text);
+}
+[data-theme="light"] .btn-outline:hover { border-color: var(--odeal-accent); color: var(--odeal-accent); }
+
+[data-theme="light"] .btn-success {
+  background: rgba(0, 134, 107, 0.15);
+  color: #00866b;
+  border-color: rgba(0, 134, 107, 0.3);
+}
+[data-theme="light"] .btn-success:hover { background: #00866b; color: white; }
+
+[data-theme="light"] .chat-window {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+[data-theme="light"] .chat-msg.ai {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.06);
+  color: var(--odeal-text);
+}
+[data-theme="light"] .chat-input-row { border-top-color: rgba(15, 23, 42, 0.08); }
+[data-theme="light"] .chat-input {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: var(--odeal-text);
+}
+[data-theme="light"] .chat-suggestions-panel {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+[data-theme="light"] .chat-suggestion-chip {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.08);
+  color: var(--odeal-text);
+}
+[data-theme="light"] .chat-suggestion-chip:hover {
+  background: rgba(226, 84, 28, 0.06);
+  border-color: rgba(226, 84, 28, 0.4);
+}
+[data-theme="light"] .chat-quota {
+  background: rgba(0, 134, 107, 0.08);
+  border-color: rgba(0, 134, 107, 0.25);
+  color: #00866b;
+}
+[data-theme="light"] .chat-quota.warn {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.3);
+  color: #d97706;
+}
+
+[data-theme="light"] .toast {
+  background: #ffffff;
+  color: var(--odeal-text);
+  border-color: rgba(226, 84, 28, 0.3);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+}
+[data-theme="light"] .toast.success { border-color: rgba(0, 134, 107, 0.4); }
+
+[data-theme="light"] .paywall {
+  background: linear-gradient(180deg, rgba(226, 84, 28, 0.05), transparent);
+  border-color: rgba(226, 84, 28, 0.3);
+}
+[data-theme="light"] .paywall-icon {
+  background: linear-gradient(135deg, rgba(226, 84, 28, 0.15), rgba(226, 84, 28, 0.06));
+  border-color: rgba(226, 84, 28, 0.3);
+}
+
+[data-theme="light"] .mobile-menu-btn {
+  border-color: rgba(15, 23, 42, 0.12);
+  color: var(--odeal-text);
+}
+
+[data-theme="light"] .stat-card-label,
+[data-theme="light"] .view-subtitle,
+[data-theme="light"] .app-topbar-subtitle { color: var(--odeal-muted); }
+
+[data-theme="light"] .sidebar-business-meta { color: var(--odeal-muted); }
+[data-theme="light"] .sidebar-section { color: var(--odeal-muted); }
+[data-theme="light"] .paywall-text { color: var(--odeal-muted); }
+
+[data-theme="light"] .nav-item-badge.lock { background: rgba(15, 23, 42, 0.06); color: var(--odeal-muted); }

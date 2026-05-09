@@ -12,7 +12,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ödeal AI Copilot — KOBİ'lerin Karar Destek Sistemi</title>
+<title>Ödeal AI — KOBİ'lerin Karar Destek Sistemi</title>
 <meta name="description" content="KOBİ'ler için satış, müşteri ve ödeme yönetiminde AI tabanlı tahminsel karar destek sistemi. LSTM + Transformer hibrit mimari.">
 
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
@@ -45,8 +45,9 @@ tailwind.config = {
 <!-- ========== NAV ========== -->
 <nav class="fixed top-0 left-0 right-0 z-50" style="backdrop-filter: blur(16px); background: rgba(10,22,40,0.7); border-bottom: 1px solid rgba(255,255,255,0.06);">
   <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-    <a href="#hero" class="flex items-center gap-2">
-      <img src="assets/logo.svg" alt="Ödeal Copilot" class="h-9">
+    <a href="#hero" class="flex items-center gap-2 no-underline">
+      <img src="assets/logo.svg" alt="Ödeal AI" style="width:32px; height:32px;">
+      <span style="font-weight:700; font-size:18px; color: var(--odeal-text);">Ödeal <span style="color: var(--odeal-accent);">AI</span></span>
     </a>
     <div class="hidden md:flex items-center gap-6 text-sm">
       <a href="#problem" class="hover:text-odeal-accent transition">Problem</a>
@@ -93,7 +94,7 @@ tailwind.config = {
       Tek tuşla: <span class="gradient-text">"Bugün ne yapayım?"</span>
     </h1>
     <p class="text-lg md:text-xl muted max-w-3xl mx-auto mb-10 leading-relaxed">
-      <strong style="color: var(--odeal-text);">Ödeal AI Copilot</strong> — POS'unuzun yanında <strong style="color: var(--odeal-green);">ücretsiz</strong> gelir.
+      <strong style="color: var(--odeal-text);">Ödeal AI</strong> — POS'unuzun yanında <strong style="color: var(--odeal-green);">ücretsiz</strong> gelir.
       Excel yok, kurulum yok, eğitim yok. Aç, oku, uygula. KOBİ için tasarlandı.
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -420,7 +421,7 @@ tailwind.config = {
       <h2 class="section-heading">POS aldığında <span class="gradient-text">hediye</span></h2>
       <p class="muted text-lg max-w-2xl mx-auto">
         Ödeal POS satışları için <strong style="color:var(--odeal-text);">değer katmanı</strong> olarak konumlanır.
-        Müşteri POS aldığında AI Copilot ücretsiz aktif olur — Ödeal'in rekabet farkı, KOBİ'nin günlük asistanı.
+        Müşteri POS aldığında AI Asistan ücretsiz aktif olur — Ödeal'in rekabet farkı, KOBİ'nin günlük asistanı.
       </p>
     </div>
 
@@ -435,7 +436,7 @@ tailwind.config = {
         <div class="text-center text-3xl gradient-text">+</div>
         <div class="text-center">
           <div class="text-5xl mb-2">✨</div>
-          <div class="font-bold text-lg">AI Copilot</div>
+          <div class="font-bold text-lg">AI Asistan</div>
           <div class="text-xs muted mt-1">karar destek sistemi · ücretsiz</div>
         </div>
       </div>
@@ -575,8 +576,9 @@ tailwind.config = {
 <!-- ========== FOOTER ========== -->
 <footer class="px-6 py-10" style="border-top: 1px solid rgba(255,255,255,0.06);">
   <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm muted">
-    <div class="flex items-center gap-3">
-      <img src="assets/logo.svg" alt="Ödeal Copilot" class="h-7">
+    <div class="flex items-center gap-2">
+      <img src="assets/logo.svg" alt="Ödeal AI" style="width:24px; height:24px;">
+      <span style="font-weight:700; font-size:14px; color: var(--odeal-text);">Ödeal <span style="color: var(--odeal-accent);">AI</span></span>
     </div>
     <div class="text-xs text-center md:text-right">
       GirDAP 2026 · Team-2 · Ödeal Case Study<br>

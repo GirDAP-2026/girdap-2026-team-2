@@ -107,7 +107,7 @@ function buildPlanToggle() {
       <div class="plan-toggle-label">Plan görüntüle</div>
       <div class="plan-toggle-btns">
         <button class="plan-toggle-btn free ${plan==='free'?'active':''}" onclick="setPlan('free')">POS Standart</button>
-        <button class="plan-toggle-btn pro ${plan==='pro'?'active':''}" onclick="setPlan('pro')">+ Copilot Pro</button>
+        <button class="plan-toggle-btn pro ${plan==='pro'?'active':''}" onclick="setPlan('pro')">+ Pro</button>
       </div>
       <div class="plan-meta">
         ${plan === 'pro'
@@ -125,7 +125,7 @@ function setPlan(p) {
   savePlan();
   buildSidebar();
   buildTopbarRight();
-  showToast(p === 'pro' ? '✨ Copilot Pro açıldı — tüm özellikler kullanıma hazır' : 'Free moduna geçildi', p === 'pro' ? 'success' : 'info');
+  showToast(p === 'pro' ? '✨ Pro Versiyon açıldı — tüm özellikler kullanıma hazır' : 'Standart moduna geçildi', p === 'pro' ? 'success' : 'info');
   // Re-render current view
   navigate(APP.state.view);
 }
@@ -929,7 +929,7 @@ function renderSettings() {
         </div>
         <div class="app-card-body">
           <div style="margin-bottom: 14px;">
-            <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${isPro ? 'POS + Copilot Pro' : 'Ödeal POS Standart'}</div>
+            <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${isPro ? 'POS + Pro Versiyon' : 'Ödeal POS Standart'}</div>
             <div style="font-size: 12.5px; color: var(--odeal-muted);">${isPro ? 'POS aboneliğine ek 199₺/ay' : 'POS aboneliğine dahil — ek ücret yok'}</div>
           </div>
 
@@ -937,14 +937,14 @@ function renderSettings() {
             <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px;"><span class="paywall-feature-icon">✓</span> "Bugün ne yapayım?" paneli</div>
             <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px;"><span class="paywall-feature-icon">✓</span> Müşteri Sağlık Skoru</div>
             <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px;"><span class="paywall-feature-icon">✓</span> Nakit akışı tahmini</div>
-            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background:rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Otomatik WhatsApp tahsilat</div>
-            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background:rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Sınırsız AI sorgu</div>
-            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background:rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Kampanya motoru</div>
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background: rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Otomatik WhatsApp tahsilat</div>
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background: rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Sınırsız AI sorgu</div>
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; ${!isPro ? 'opacity:0.5;' : ''}"><span class="paywall-feature-icon" style="${!isPro ? 'background: rgba(255,255,255,0.06); color:var(--odeal-muted);' : ''}">${isPro ? '✓' : '✗'}</span> Kampanya motoru</div>
           </div>
 
           ${isPro
             ? `<button class="btn btn-outline" onclick="setPlan('free')" style="width: 100%;">Standart'a geri dön</button>`
-            : `<button class="btn btn-accent" onclick="setPlan('pro')" style="width: 100%;">${I.sparkle} Copilot Pro'ya geç (+199₺/ay)</button>`
+            : `<button class="btn btn-accent" onclick="setPlan('pro')" style="width: 100%;">${I.sparkle} Pro Versiyona geç (+199₺/ay)</button>`
           }
         </div>
       </div>
@@ -983,7 +983,7 @@ function renderSettings() {
 
 // ============= PAYWALL =============
 function renderPaywall(view) {
-  setTopbarTitle(view === 'campaigns' ? 'Kampanyalar' : 'WhatsApp Otomasyon', 'Bu özellik Copilot Pro ile gelir');
+  setTopbarTitle(view === 'campaigns' ? 'Kampanyalar' : 'WhatsApp Otomasyon', 'Bu özellik Pro Versiyonda gelir');
   const config = {
     campaigns: {
       icon: '🎯',
