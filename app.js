@@ -570,7 +570,7 @@ function buildPlanToggle() {
       <div class="plan-toggle-label">Plan görüntüle</div>
       <div class="plan-toggle-btns">
         <button class="plan-toggle-btn free ${plan==='free'?'active':''}" onclick="setPlan('free')">POS Standart</button>
-        <button class="plan-toggle-btn pro ${plan==='pro'?'active':''}" onclick="setPlan('pro')">+ Pro</button>
+        <button class="plan-toggle-btn pro ${plan==='pro'?'active':''}" onclick="setPlan('pro')">POS Pro+</button>
       </div>
       <div class="plan-meta">
         ${plan === 'pro'
@@ -588,7 +588,7 @@ function setPlan(p) {
   savePlan();
   buildSidebar();
   buildTopbarRight();
-  showToast(p === 'pro' ? '✨ Pro Versiyon açıldı — tüm özellikler kullanıma hazır' : 'Standart moduna geçildi', p === 'pro' ? 'success' : 'info');
+  showToast(p === 'pro' ? '✨ POS Pro+ açıldı — tüm özellikler kullanıma hazır' : 'Standart moduna geçildi', p === 'pro' ? 'success' : 'info');
   // Re-render current view
   navigate(APP.state.view);
 }
@@ -1304,9 +1304,15 @@ function renderAI() {
     <div class="chat-grid">
       <div class="chat-window">
         <div class="chat-messages" id="chat-messages">
-          ${messages.map(m => `
-            <div class="chat-msg ${m.role}">${m.text}</div>
-          `).join('')}
+          ${messages.map(m => {
+            if (m.text === '__TYPING__') {
+              return `<div class="chat-msg ai chat-typing">
+                <span class="typing-dots"><span></span><span></span><span></span></span>
+                <span style="margin-left:8px; font-size:12px; color: var(--odeal-muted);">ÖdeAI düşünüyor…</span>
+              </div>`;
+            }
+            return `<div class="chat-msg ${m.role}">${m.text}</div>`;
+          }).join('')}
         </div>
         <div class="chat-input-row">
           <input type="text" class="chat-input" id="chat-input" placeholder="Bir soru yaz..." onkeydown="if(event.key==='Enter') sendChat();">
@@ -1360,36 +1366,55 @@ function quickAsk(key) {
 }
 
 // Yan paneldeki örnek soruları tetiklemek için
-function askChatFree(text) {
+async function askChatFree(text) {
   if (!text) return;
   if (APP.state.view !== 'ai') {
-    APP.state.aiHistory.push({ role: 'user', text });
-    APP.state.aiHistory.push({ role: 'ai', text: generateScopeAwareResponse(text) });
-    APP.state.aiQueriesUsed++;
     navigate('ai');
+    setTimeout(() => askChatFree(text), 50);
     return;
   }
-  APP.state.aiHistory.push({ role: 'user', text });
-  APP.state.aiHistory.push({ role: 'ai', text: generateScopeAwareResponse(text) });
-  APP.state.aiQueriesUsed++;
-  renderAI();
-  setTimeout(() => {
-    const m = document.getElementById('chat-messages');
-    if (m) m.scrollTop = m.scrollHeight;
-  }, 50);
+  await processChat(text);
 }
 
-function sendChat() {
+async function sendChat() {
   const input = document.getElementById('chat-input');
   if (!input || !input.value.trim()) return;
   const text = input.value.trim();
-  APP.state.aiHistory.push({ role: 'user', text: text });
-  // Scope-aware response
-  const response = generateScopeAwareResponse(text);
-  APP.state.aiHistory.push({ role: 'ai', text: response });
-  APP.state.aiQueriesUsed++;
   input.value = '';
+  await processChat(text);
+}
+
+// Asıl chat işleyici — Gemini çağrısı yapar, fallback'e düşer
+async function processChat(userText) {
+  APP.state.aiHistory.push({ role: 'user', text: userText });
+  APP.state.aiHistory.push({ role: 'ai', text: '__TYPING__' });
+  APP.state.aiQueriesUsed++;
   renderAI();
+  scrollChatToBottom();
+
+  let aiText = null;
+  try {
+    if (typeof askGemini === 'function') {
+      const result = await askGemini(userText);
+      if (result && result.text) aiText = result.text;
+    }
+  } catch (e) {
+    console.warn('Gemini çağrısı başarısız:', e);
+  }
+
+  // Fallback: scope-aware mock
+  if (!aiText) {
+    aiText = generateScopeAwareResponse(userText);
+  }
+
+  // Replace typing placeholder
+  APP.state.aiHistory.pop();
+  APP.state.aiHistory.push({ role: 'ai', text: aiText });
+  renderAI();
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
   setTimeout(() => {
     const m = document.getElementById('chat-messages');
     if (m) m.scrollTop = m.scrollHeight;
@@ -1689,7 +1714,7 @@ function renderSettings() {
         </div>
         <div class="app-card-body">
           <div style="margin-bottom: 14px;">
-            <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${isPro ? 'POS + Pro Versiyon' : 'Ödeal POS Standart'}</div>
+            <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${isPro ? 'POS Pro+' : 'Ödeal POS Standart'}</div>
             <div style="font-size: 12.5px; color: var(--odeal-muted);">${isPro ? 'POS aboneliğine ek 199₺/ay' : 'POS aboneliğine dahil — ek ücret yok'}</div>
           </div>
 
@@ -1704,7 +1729,7 @@ function renderSettings() {
 
           ${isPro
             ? `<button class="btn btn-outline" onclick="setPlan('free')" style="width: 100%;">Standart'a geri dön</button>`
-            : `<button class="btn btn-accent" onclick="setPlan('pro')" style="width: 100%;">${I.sparkle} Pro Versiyona geç (+199₺/ay)</button>`
+            : `<button class="btn btn-accent" onclick="setPlan('pro')" style="width: 100%;">${I.sparkle} POS Pro+ aboneliğine geç (+199₺/ay)</button>`
           }
         </div>
       </div>
@@ -1743,7 +1768,7 @@ function renderSettings() {
 
 // ============= PAYWALL =============
 function renderPaywall(view) {
-  setTopbarTitle(view === 'campaigns' ? 'Kampanyalar' : 'WhatsApp Otomasyon', 'Bu özellik Pro Versiyonda gelir');
+  setTopbarTitle(view === 'campaigns' ? 'Kampanyalar' : 'WhatsApp Otomasyon', 'Bu özellik POS Pro+ ile gelir');
   const config = {
     campaigns: {
       icon: '🎯',

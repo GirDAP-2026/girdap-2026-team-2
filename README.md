@@ -1,4 +1,4 @@
-# Ödeal AI — KOBİ Karar Destek Sistemi
+# ÖdeAI — KOBİ Karar Destek Sistemi
 
 > GirDAP-2026 · Team-2 · Ödeal Case
 
