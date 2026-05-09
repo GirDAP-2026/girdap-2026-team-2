@@ -45,6 +45,274 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Ayarlar', icon: I.settings }
 ];
 
+// ============= AI MODÜL KATALOĞU =============
+// entegrasyon.md mantığı: tek katalog → sidebar + rota + tip güvenliği aynı yerden.
+// İleride backend'e (Gemini) bağlanırken sadece askModule() içinde fetch eklenecek.
+const AI_MODULES = [
+  {
+    id: 'forecast',
+    label: 'Tahmin Asistanı',
+    iconEmoji: '📈',
+    color: '#00c896',
+    description: 'Geçmiş POS verisini LSTM ile analiz eder, sonraki 30-90 günü tahmin eder.',
+    prompts: [
+      {
+        q: 'Önümüzdeki 30 günde nakit akışım ne olacak?',
+        a: `<strong>Tahmin (Mayıs 9 → Haziran 7):</strong><br><br>
+          📊 Beklenen toplam gelir: <strong>147.300₺</strong> (±8%)<br>
+          📉 Beklenen gider: <strong>129.800₺</strong><br>
+          💰 Net pozisyon: <strong style="color:#00c896">+17.500₺</strong><br><br>
+          ⚠️ <strong>18 Mayıs civarı dip:</strong> 8.000₺ geçici açık riski (%72 olasılık).<br>
+          💡 <strong>Önerim:</strong> Mehmet Tan ve Selim Demir'den tahsilatı 17 Mayıs'a çekersen kapanır.`
+      },
+      {
+        q: 'Gelecek hafta hangi gün en yüksek satış olur?',
+        a: `Geçmiş 12 hafta verisi + sezonsal patern + hava tahmininden:<br><br>
+          🥇 <strong>Cuma (16 May):</strong> tahmini <strong>6.200₺</strong> (haftalık ortalamanın %23 üstü)<br>
+          🥈 <strong>Cumartesi (17 May):</strong> tahmini <strong>5.800₺</strong><br>
+          🥉 <strong>Salı (13 May):</strong> tahmini <strong>5.400₺</strong> — hava yağmurlu, dış giyim trendi<br><br>
+          💡 Cuma 18:00-22:00 arası kampanya yaparsan ek <strong>~1.400₺</strong> getirisi tahmin ediyorum.`
+      },
+      {
+        q: 'Bu ay sonunda kâra geçecek miyim?',
+        a: `<strong>Ay sonu projeksiyonu (31 Mayıs):</strong><br><br>
+          📈 Beklenen aylık gelir: <strong>168.200₺</strong><br>
+          📉 Sabit + değişken giderler: <strong>142.000₺</strong><br>
+          ✅ <strong>Net kâr beklentisi:</strong> ~26.200₺ (%15.6 marj)<br><br>
+          Geçen ay marjın %12.8'di — <strong style="color:#00c896">↑%2.8 artış</strong> trendinde.<br>
+          💡 Cuma kampanyaları çalışırsa marj %17'ye çıkabilir.`
+      },
+      {
+        q: 'Stoklarım ne zaman biter?',
+        a: `Satış hızına göre stok bitiş tahminleri:<br><br>
+          🔴 <strong>Sweat & Kazak:</strong> 8 gün sonra (16 May) — <em>acil sipariş ver</em><br>
+          🟡 <strong>Çanta & Aksesuar:</strong> 17 gün (25 May)<br>
+          🟢 <strong>Erkek giyim:</strong> 31 gün (8 Haz) — durum iyi<br>
+          🟢 <strong>Yağmurluk/dış giyim:</strong> 14 gün — hava etkisi ile hızlanabilir<br><br>
+          💡 Sweat kategorisi marjı en yüksek (%42), önceliklendir.`
+      }
+    ]
+  },
+  {
+    id: 'customer',
+    label: 'Müşteri Analisti',
+    iconEmoji: '🧑‍🤝‍🧑',
+    color: '#3b82f6',
+    description: 'Transformer modeli + davranış verisi ile müşteri segmentasyonu, sadakat ve kayıp tahmini.',
+    prompts: [
+      {
+        q: 'Hangi müşterilerimi kaybedebilirim?',
+        a: `<strong>3 yüksek riskli müşteri</strong> tespit ettim:<br><br>
+          🔴 <strong>Mehmet Tan</strong> (sağlık skoru 28) — 37 gündür yok, son şikâyet metninde olumsuz duygu (–0.62)<br>
+          🔴 <strong>Selim Demir</strong> (skor 35) — 32 gün, son 3 ziyarette harcaması düşüş trendinde<br>
+          🔴 <strong>Fatma Yılmaz</strong> (skor 31) — 45 gün, sezonlu alıcı ama bu sezon sessiz<br><br>
+          💡 <strong>Aksiyon:</strong> Üçü için kişiselleştirilmiş geri kazanma kampanyası hazırlayabilirim. <em>Devam et?</em>`
+      },
+      {
+        q: 'En sadık müşterilerim kim?',
+        a: `<strong>Top 3 sadık müşteri</strong> (frekans + harcama + duygu):<br><br>
+          👑 <strong>Cem Öztürk</strong> — VIP, yıllık 9.200₺, 18 ziyaret, sadakat %92<br>
+          💚 <strong>Ayşe Kara</strong> — Sadık, 4.200₺, 14 ziyaret, %89<br>
+          💚 <strong>Ali Korkmaz</strong> — Sadık, 5.600₺, 12 ziyaret, %81<br><br>
+          💡 Bu 3 müşteri toplam gelirinin <strong>%32</strong>'sini temsil ediyor. Tavsiye programı + öncelikli erişim öner.`
+      },
+      {
+        q: 'Hangi müşteriye ne satmalıyım?',
+        a: `Çapraz satış önerileri (alışveriş geçmişi + benzer müşteri patern):<br><br>
+          • <strong>Cem Öztürk</strong> → Premium aksesuar (kabul olasılığı %78)<br>
+          • <strong>Zeynep Aksoy</strong> → Yaz koleksiyonu mini paket (%71)<br>
+          • <strong>Ali Korkmaz</strong> → Yağmurluk + çanta seti (%65)<br>
+          • <strong>Elif Şahin</strong> → Sadakat kartı + ilk indirim (%58)<br><br>
+          💡 Toplam beklenen ek gelir: ~<strong>3.400₺</strong>`
+      },
+      {
+        q: 'Müşterilerimi segmentlere ayır',
+        a: `8 müşterini davranışa göre <strong>4 segmente</strong> ayırdım:<br><br>
+          👑 <strong>VIP (1):</strong> Cem — düşük indirim duyarlılığı, yüksek harcama<br>
+          💚 <strong>Sadık (2):</strong> Ayşe Kara, Ali — düzenli, indirim bağımsız<br>
+          💛 <strong>Düzenli (2):</strong> Zeynep, Elif — indirim duyarlı, büyütme potansiyeli<br>
+          🔴 <strong>Kayıp Risk (3):</strong> Mehmet, Selim, Fatma — acil aksiyon gerek<br><br>
+          💡 Her segment için farklı iletişim stratejisi öneriyorum. Detay ister misin?`
+      }
+    ]
+  },
+  {
+    id: 'message',
+    label: 'Mesaj Asistanı',
+    iconEmoji: '✉️',
+    color: '#ff6b35',
+    description: 'WhatsApp/SMS için kişiselleştirilmiş mesajlar üretir. Ton ve uzunluk seçilebilir.',
+    prompts: [
+      {
+        q: 'Mehmet\'e tahsilat hatırlatma yaz (yumuşak)',
+        a: `<div style="background: rgba(0,200,150,0.06); padding: 14px; border-radius: 10px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">Merhaba Mehmet Bey 👋
+
+Umarım iyisinizdir. Geçen ay aldığınız ürünlerin 3.500₺ tutarındaki ödemesinin vadesi 4 Mayıs'ta dolmuştu. Belki gözden kaçtı diye hatırlatmak istedim.
+
+Dilerseniz tek tıkla buradan ödeyebilirsiniz: [link]
+
+Sorularınız olursa hemen yazın.
+
+İyi günler,
+Ayşe — Ayşe'nin Butiği</div>
+          <br>
+          <em style="color:var(--odeal-muted); font-size:12px;">Ton: yumuşak-hatırlatıcı · Tahmini açılma: %87 · WhatsApp uygun</em>`
+      },
+      {
+        q: 'VIP müşteriye teşekkür mesajı',
+        a: `<div style="background: rgba(0,200,150,0.06); padding: 14px; border-radius: 10px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">Sevgili Cem Bey 👑
+
+Bu yıl 18'inci kez bizi tercih ettiniz — çok minnettarız!
+
+Sizi VIP listemize ekliyoruz: yeni sezon ürünlerimize 24 saat erken erişim + her alışverişte %5 sürpriz indirim. Hiçbir şey yapmanıza gerek yok, otomatik aktif.
+
+Bir kahve içmeye buyurun, evden bekleriz ☕
+
+Ayşe</div>
+          <br>
+          <em style="color:var(--odeal-muted); font-size:12px;">Ton: samimi-ödüllendirici · Tahmini etki: tekrar ziyaret +%34</em>`
+      },
+      {
+        q: 'Kayıp müşteriye geri dönüş daveti',
+        a: `<div style="background: rgba(0,200,150,0.06); padding: 14px; border-radius: 10px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">Merhaba Selim Bey 🌷
+
+Bir aydır sizi göremedik, umarım her şey yolundadır!
+
+Yeni sezon ürünlerimize sizin için <strong>%15 özel indirim</strong> ayırdım — sadece bu hafta geçerli. Kullanmak için bu mesajı gösterip uğramanız yeterli.
+
+Sizi yeniden görmek isterim,
+Ayşe</div>
+          <br>
+          <em style="color:var(--odeal-muted); font-size:12px;">Ton: sıcak-davetkâr · Geri kazanma olasılığı: %42</em>`
+      },
+      {
+        q: 'Cuma kampanya duyurusu (toplu)',
+        a: `<div style="background: rgba(0,200,150,0.06); padding: 14px; border-radius: 10px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">{Ad} Hanım/Bey 🌙
+
+Bu Cuma Ayşe'nin Butiği'nde özel akşam: <strong>18:00-22:00 arası tüm ürünlerde %15 indirim</strong>!
+
+Yağmurlu hava için yeni gelen yağmurluklarımıza özellikle bakmanızı öneririm 🌧️
+
+Görüşmek üzere,
+Ayşe</div>
+          <br>
+          <em style="color:var(--odeal-muted); font-size:12px;">Ton: enerjik-kısa · Hedef: 47 müşteri · Tahmini geri dönüş: ~6.500₺</em>`
+      }
+    ]
+  },
+  {
+    id: 'campaign',
+    label: 'Kampanya Stüdyosu',
+    iconEmoji: '🎯',
+    color: '#ec4899',
+    description: 'Hedef segment, mesaj ve zamanlama önerir. AI, geçmiş kampanya verisinden öğrenir.',
+    prompts: [
+      {
+        q: 'Cuma akşamı için kampanya öner',
+        a: `<strong>📅 Kampanya: Cuma Akşamı Trafik</strong><br><br>
+          🎯 <strong>Hedef:</strong> Düzenli + Sadık (47 müşteri)<br>
+          🎁 <strong>Teklif:</strong> 18:00-22:00 arası %15 indirim<br>
+          💬 <strong>Kanal:</strong> WhatsApp (Cuma 14:00 gönder)<br>
+          🌧️ <strong>Bonus tetikleyici:</strong> Yağmur tahmini → dış giyim ön plana çıkar<br><br>
+          📊 <strong>Tahmini sonuç:</strong><br>
+          • Yanıt oranı: %38<br>
+          • Mağazaya gelen: ~18 müşteri<br>
+          • Ek gelir: <strong>~6.500₺</strong><br>
+          • ROI: %1300 (mesaj maliyeti yok)<br><br>
+          💡 <em>Aktif et?</em>`
+      },
+      {
+        q: 'Kayıp müşterileri geri kazan',
+        a: `<strong>📅 Kampanya: Geri Hoşgeldin</strong><br><br>
+          🎯 <strong>Hedef:</strong> 30+ gündür yok (Mehmet, Selim, Fatma + 2 daha)<br>
+          🎁 <strong>Teklif:</strong> Kişiye özel %15-25 indirim (sadakat skoruna göre)<br>
+          💬 <strong>Kanal:</strong> WhatsApp + SMS (yedek)<br>
+          📅 <strong>Akış:</strong><br>
+          1. Gün: kişisel mesaj (samimi ton)<br>
+          4. Gün: kullanmadıysa hatırlatma<br>
+          7. Gün: son fırsat + ek %5<br><br>
+          📊 <strong>Tahmin:</strong> %42 geri dönüş = ~2 müşteri × 600₺ = <strong>1.200₺</strong> ek gelir<br><br>
+          💡 LTV korumasi: bu müşteriler kalırsa yıllık ~28.000₺.`
+      },
+      {
+        q: 'Yeni müşteri çekme kampanyası',
+        a: `<strong>📅 Kampanya: Komşu Davet</strong><br><br>
+          🎯 <strong>Yöntem:</strong> Mevcut müşterilerin tavsiyesi<br>
+          🎁 <strong>Teklif:</strong> Tavsiye eden +50₺ kupon, gelen +%20 indirim<br>
+          💬 <strong>Kanal:</strong> WhatsApp + sosyal medya story<br>
+          👥 <strong>Tetikleyici:</strong> VIP + Sadık 3 müşteri (en yüksek tavsiye potansiyeli)<br><br>
+          📊 <strong>Tahmini sonuç (4 hafta):</strong><br>
+          • Tavsiye gönderimi: ~12<br>
+          • Gelen yeni müşteri: 3-5<br>
+          • Maliyet: ~150₺ kupon + %20 indirim<br>
+          • Tahmini LTV: <strong>2.400-4.000₺</strong>`
+      },
+      {
+        q: 'Doğum günü kampanyası kur',
+        a: `<strong>📅 Kampanya: Doğum Günü Hediyesi (otomatik)</strong><br><br>
+          🤖 <strong>Tetikleyici:</strong> Müşteri profili → doğum günü tarihi<br>
+          🎁 <strong>Teklif:</strong> %20 indirim + ücretsiz hediye paketi<br>
+          📅 <strong>Zamanlama:</strong> 7 gün önce + doğum günü sabahı<br>
+          💬 <strong>Kanal:</strong> WhatsApp (kişisel ton)<br><br>
+          📊 <strong>Yıllık tahmin:</strong><br>
+          • Tetiklenecek müşteri: 8 × 12 ay = 96 fırsat<br>
+          • Ortalama dönüşüm: %58<br>
+          • Ek gelir: <strong>~22.400₺/yıl</strong><br><br>
+          ✨ Bir kez kur, sonsuza dek otomatik.`
+      }
+    ]
+  },
+  {
+    id: 'insight',
+    label: 'İçgörü Üreticisi',
+    iconEmoji: '💡',
+    color: '#a855f7',
+    description: 'Verinizdeki gizli paternleri, anomali ve fırsatları yakalar. Sürekli arka planda çalışır.',
+    prompts: [
+      {
+        q: 'Bu hafta dikkat etmem gereken ne?',
+        a: `<strong>🚨 Bu hafta için 3 önemli sinyal:</strong><br><br>
+          1. <strong>Cuma anomalisi:</strong> Son 4 Cuma satışların ortalamadan %23 yüksek — kampanyayla bu farkı %35'e çıkarabilirsin.<br><br>
+          2. <strong>Mehmet Tan kritik dönem:</strong> Geçen yıl bu tarihte 3 alışveriş yaptı, bu yıl 0. Tarihsel patern + duygu skoru → kalıcı kayıp riski %71.<br><br>
+          3. <strong>Yağmur etkisi:</strong> 11-13 Mayıs hava tahmini yağmurlu. Geçmiş veride yağmurlu günlerde dış giyim satışı +%31.`
+      },
+      {
+        q: 'Beklenmedik trend var mı?',
+        a: `<strong>🔍 3 ilginç patern buldum:</strong><br><br>
+          • <strong>Salı saat 14:00 zirvesi:</strong> Geçen 6 ay verinde Salı 14:00-15:00 arası satışların ortalamanın %18 üstünde. Sebep belirsiz — belki öğle arası ofislerden? <em>Bu saatler için özel teklif test edilebilir.</em><br><br>
+          • <strong>Aksesuar + Çanta beraber:</strong> Çanta alanların %67'si aksesuar da alıyor (sektör %42). Bu güçlü cross-sell sinyali.<br><br>
+          • <strong>Zeynep'in patern bozması:</strong> 3 aydır her ayın başı geliyordu, bu ay gelmedi. Sebebi araştırmaya değer — kişisel mesaj?`
+      },
+      {
+        q: 'Rakiplerime göre nerede iyi/kötüyüm?',
+        a: `<strong>📊 Bölgenizdeki 3 benzer butik (anonim) ile karşılaştırma:</strong><br><br>
+          ✅ <strong>Üstte olduğun:</strong><br>
+          • Ortalama sepet: 425₺ (rakip ort. 380₺) — <em>+%12</em><br>
+          • Tekrar ziyaret oranı: %47 (rakip %38) — <em>+%24</em><br>
+          • Müşteri başı yıllık değer: 5.800₺ (rakip 4.700₺)<br><br>
+          ⚠️ <strong>Geride olduğun:</strong><br>
+          • Cuma akşamı yoğunluk: 16 müşteri/saat (rakip 24)<br>
+          • Sosyal medya görünürlüğü: ~%40 daha düşük<br><br>
+          💡 <strong>Önerim:</strong> Cuma kampanyasıyla bu fark kapatılabilir — diğer her şey iyi.`
+      },
+      {
+        q: 'Sıradaki büyüme adımım ne olmalı?',
+        a: `<strong>🚀 Veri odaklı 3 büyüme önerisi (etki sırasıyla):</strong><br><br>
+          <strong>1. Sadakat programı kur</strong> (yüksek etki)<br>
+          • Mevcut Top-3 müşterin gelirinin %32'sini getiriyor<br>
+          • Sadakat puanı sistemi → tekrar ziyaret +%18 tahmini<br>
+          • 6 aylık ek gelir: <strong>~38.000₺</strong><br><br>
+          <strong>2. Cuma akşamı düzenli etkinlik</strong> (orta etki)<br>
+          • Boş kapasite var, müşteri var, talep var<br>
+          • Aylık ek gelir: <strong>~12.000₺</strong><br><br>
+          <strong>3. Komşu butikle çapraz tavsiye</strong> (düşük risk)<br>
+          • Aksesuar/çanta gibi tamamlayıcı müşteri trafiği<br>
+          • Maliyet düşük, dene-gör.`
+      }
+    ]
+  }
+];
+
 // ============= INIT =============
 document.addEventListener('DOMContentLoaded', init);
 
@@ -94,8 +362,26 @@ function buildSidebar() {
       ${it.pro ? `<span class="nav-item-badge ${APP.state.plan === 'free' ? 'lock' : ''}">${APP.state.plan === 'free' ? 'PRO' : 'PRO'}</span>` : ''}
     </button>
   `).join('');
+  buildModulesSection();
   buildPlanToggle();
   updateActiveNav();
+}
+
+function buildModulesSection() {
+  const host = document.getElementById('sidebar-modules');
+  if (!host) return;
+  host.innerHTML = `
+    <div class="sidebar-section" style="display: flex; align-items: center; gap: 6px;">
+      <span>AI Modülleri</span>
+      <span style="font-size: 9px; padding: 1px 6px; border-radius: 4px; background: rgba(255,107,53,0.15); color: var(--odeal-accent); font-weight: 700; letter-spacing: 0.5px;">YENİ</span>
+    </div>
+    ${AI_MODULES.map(m => `
+      <button class="nav-item module-nav-item" data-view="module-${m.id}" onclick="navigate('module-${m.id}')" style="--mod-color: ${m.color};">
+        <span class="nav-item-icon module-emoji">${m.iconEmoji}</span>
+        <span class="nav-item-text">${m.label}</span>
+      </button>
+    `).join('')}
+  `;
 }
 
 function buildPlanToggle() {
@@ -193,6 +479,14 @@ function navigate(view) {
   // Close mobile sidebar after nav
   document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('sidebar-backdrop')?.classList.remove('open');
+
+  // AI Module rota: module-<id>
+  if (view.startsWith('module-')) {
+    const moduleId = view.slice('module-'.length);
+    renderModule(moduleId);
+    updateActiveNav();
+    return;
+  }
 
   if (PRO_ONLY_VIEWS.includes(view) && APP.state.plan === 'free') {
     renderPaywall(view);
@@ -1032,4 +1326,136 @@ function renderPaywall(view) {
       </div>
     </div>
   `;
+}
+
+// ============= AI MODULE RENDERER =============
+function renderModule(id) {
+  const m = AI_MODULES.find(x => x.id === id);
+  if (!m) { renderDashboard(); return; }
+  setTopbarTitle(m.label, m.description);
+
+  $view().innerHTML = `
+    <div class="module-shell" style="--mod-color: ${m.color};">
+      <div class="module-header">
+        <div class="module-header-icon">${m.iconEmoji}</div>
+        <div style="flex: 1;">
+          <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 4px;">${m.label}</h2>
+          <p style="margin: 0; color: var(--odeal-muted); font-size: 13px; line-height: 1.5; max-width: 640px;">${m.description}</p>
+        </div>
+        <span class="badge badge-info" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">${APP.state.plan === 'pro' ? '✨ Pro' : 'Standart'}</span>
+      </div>
+
+      <div class="module-prompt-grid">
+        ${m.prompts.map((p, i) => `
+          <button class="module-prompt-btn" onclick="askModule('${m.id}', ${i})">
+            <span class="module-prompt-arrow">↗</span>
+            <span class="module-prompt-text">${p.q}</span>
+          </button>
+        `).join('')}
+      </div>
+
+      <div id="module-output" class="module-output">
+        <div class="module-output-empty">
+          <div style="font-size: 36px; margin-bottom: 12px;">${m.iconEmoji}</div>
+          <div style="font-size: 14px; color: var(--odeal-muted);">Yukarıdan bir soru seç ya da kendi sorunu yaz</div>
+        </div>
+      </div>
+
+      <div class="module-input-row">
+        <input type="text" class="module-input" id="module-input" placeholder="Veya kendi sorunu yaz..." onkeydown="if(event.key==='Enter') askModuleFreeform('${m.id}');">
+        <button class="btn btn-accent" onclick="askModuleFreeform('${m.id}')">${I.send}</button>
+      </div>
+
+      <div style="margin-top: 16px; padding: 12px 14px; background: rgba(255,255,255,0.02); border-radius: 10px; font-size: 11.5px; color: var(--odeal-muted); line-height: 1.5; display: flex; align-items: center; gap: 8px;">
+        <span>🔌</span>
+        <span>Bu modül şu an mock veriyle çalışıyor. <code style="background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; font-family: monospace;">backend/api/${m.id}</code> uç noktasına bağlandığında Gemini'den gerçek cevap gelecek.</span>
+      </div>
+    </div>
+  `;
+}
+
+function askModule(moduleId, promptIndex) {
+  const m = AI_MODULES.find(x => x.id === moduleId);
+  if (!m) return;
+  const p = m.prompts[promptIndex];
+  if (!p) return;
+
+  const out = document.getElementById('module-output');
+  if (!out) return;
+
+  // Step 1: Show user question + typing dots
+  out.innerHTML = `
+    <div class="module-msg user fade-in">${p.q}</div>
+    <div class="module-msg ai fade-in">
+      <div class="module-msg-header">
+        <span style="font-size: 14px;">${m.iconEmoji}</span>
+        <strong style="color: var(--mod-color);">${m.label}</strong>
+        <span class="typing-dots"><span></span><span></span><span></span></span>
+      </div>
+    </div>
+  `;
+  out.scrollTop = out.scrollHeight;
+
+  // Step 2: Replace typing dots with response after delay
+  setTimeout(() => {
+    out.innerHTML = `
+      <div class="module-msg user fade-in">${p.q}</div>
+      <div class="module-msg ai fade-in">
+        <div class="module-msg-header">
+          <span style="font-size: 14px;">${m.iconEmoji}</span>
+          <strong style="color: var(--mod-color);">${m.label}</strong>
+          <span style="font-size: 10px; color: var(--odeal-muted); margin-left: auto;">${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="module-msg-body">${p.a}</div>
+        <div class="module-msg-actions">
+          <button class="btn-tiny" onclick="showToast('Kopyalandı','success')">📋 Kopyala</button>
+          <button class="btn-tiny" onclick="showToast('Cevap kaydedildi','success')">⭐ Kaydet</button>
+          <button class="btn-tiny" onclick="askModule('${moduleId}', ${promptIndex})">↻ Yeniden üret</button>
+        </div>
+      </div>
+    `;
+    out.scrollTop = out.scrollHeight;
+  }, 800);
+}
+
+function askModuleFreeform(moduleId) {
+  const input = document.getElementById('module-input');
+  if (!input || !input.value.trim()) return;
+  const m = AI_MODULES.find(x => x.id === moduleId);
+  if (!m) return;
+  const q = input.value.trim();
+  input.value = '';
+
+  const out = document.getElementById('module-output');
+  if (!out) return;
+
+  out.innerHTML = `
+    <div class="module-msg user fade-in">${q}</div>
+    <div class="module-msg ai fade-in">
+      <div class="module-msg-header">
+        <span style="font-size: 14px;">${m.iconEmoji}</span>
+        <strong style="color: var(--mod-color);">${m.label}</strong>
+        <span class="typing-dots"><span></span><span></span><span></span></span>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    out.innerHTML = `
+      <div class="module-msg user fade-in">${q}</div>
+      <div class="module-msg ai fade-in">
+        <div class="module-msg-header">
+          <span style="font-size: 14px;">${m.iconEmoji}</span>
+          <strong style="color: var(--mod-color);">${m.label}</strong>
+          <span style="font-size: 10px; color: var(--odeal-muted); margin-left: auto;">${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="module-msg-body">
+          Sorunu aldım: "<em>${q}</em>"<br><br>
+          Bu modülün şu an mock cevaplarıyla çalıştığını hatırlatayım — backend Gemini bağlandığında özel cevap üretilecek.<br><br>
+          Şimdilik <strong>yukarıdaki hazır sorulardan</strong> birini deneyebilir veya ${m.label.toLowerCase()} alanında istediğin başka bir konuyu test edebilirsin.
+        </div>
+      </div>
+    `;
+    out.scrollTop = out.scrollHeight;
+  }, 700);
 }
