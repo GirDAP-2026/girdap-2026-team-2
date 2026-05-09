@@ -41,10 +41,31 @@ function renderCustomers() {
 }
 
 // Cash flow chart
+let cashFlowChartInstance = null;
+
+function getThemeColors() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    actual: isLight ? '#00866b' : '#00c896',
+    actualBg: isLight ? 'rgba(0, 134, 107, 0.10)' : 'rgba(0, 200, 150, 0.12)',
+    predicted: isLight ? '#e2541c' : '#ff6b35',
+    predictedBg: isLight ? 'rgba(226, 84, 28, 0.08)' : 'rgba(255, 107, 53, 0.10)',
+    text: isLight ? '#475569' : '#cbd5e1',
+    muted: isLight ? '#64748b' : '#94a3b8',
+    grid: isLight ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.04)',
+    tooltipBg: isLight ? 'rgba(255, 255, 255, 0.97)' : 'rgba(10, 22, 40, 0.95)',
+    tooltipText: isLight ? '#0f172a' : '#e2e8f0',
+    tooltipBody: isLight ? '#475569' : '#cbd5e1',
+    tooltipBorder: isLight ? 'rgba(226,84,28,0.3)' : 'rgba(255,107,53,0.3)'
+  };
+}
+
 function renderChart() {
   const canvas = document.getElementById('cashflow-chart');
   if (!canvas || typeof Chart === 'undefined') return;
-  new Chart(canvas.getContext('2d'), {
+  if (cashFlowChartInstance) { cashFlowChartInstance.destroy(); }
+  const c = getThemeColors();
+  cashFlowChartInstance = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
       labels: cashFlow.labels,
@@ -52,8 +73,8 @@ function renderChart() {
         {
           label: 'Gerçekleşen',
           data: cashFlow.actual,
-          borderColor: '#00c896',
-          backgroundColor: 'rgba(0, 200, 150, 0.12)',
+          borderColor: c.actual,
+          backgroundColor: c.actualBg,
           tension: 0.35,
           fill: true,
           pointRadius: 0,
@@ -64,8 +85,8 @@ function renderChart() {
         {
           label: 'AI Tahmini',
           data: cashFlow.predicted,
-          borderColor: '#ff6b35',
-          backgroundColor: 'rgba(255, 107, 53, 0.10)',
+          borderColor: c.predicted,
+          backgroundColor: c.predictedBg,
           borderDash: [6, 4],
           tension: 0.35,
           fill: true,
@@ -82,13 +103,13 @@ function renderChart() {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#cbd5e1', font: { family: 'Inter', size: 12 }, usePointStyle: true, padding: 16 }
+          labels: { color: c.text, font: { family: 'Inter', size: 12 }, usePointStyle: true, padding: 16 }
         },
         tooltip: {
-          backgroundColor: 'rgba(10, 22, 40, 0.95)',
-          titleColor: '#e2e8f0',
-          bodyColor: '#cbd5e1',
-          borderColor: 'rgba(255,107,53,0.3)',
+          backgroundColor: c.tooltipBg,
+          titleColor: c.tooltipText,
+          bodyColor: c.tooltipBody,
+          borderColor: c.tooltipBorder,
           borderWidth: 1,
           padding: 12,
           callbacks: {
@@ -99,19 +120,30 @@ function renderChart() {
       scales: {
         y: {
           ticks: {
-            color: '#94a3b8',
+            color: c.muted,
             font: { family: 'Inter', size: 11 },
             callback: (v) => (v / 1000) + 'k'
           },
-          grid: { color: 'rgba(255,255,255,0.04)' }
+          grid: { color: c.grid }
         },
         x: {
-          ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, maxTicksLimit: 10 },
+          ticks: { color: c.muted, font: { family: 'Inter', size: 11 }, maxTicksLimit: 10 },
           grid: { display: false }
         }
       }
     }
   });
+}
+
+// Theme toggle
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('odeal_theme', next);
+  // Re-render chart with new theme colors
+  renderChart();
 }
 
 // Chat

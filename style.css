@@ -1,4 +1,5 @@
-:root {
+:root,
+:root[data-theme="dark"] {
   --odeal-dark: #0a1628;
   --odeal-blue: #1a2b4a;
   --odeal-surface: rgba(255, 255, 255, 0.04);
@@ -8,11 +9,35 @@
   --odeal-green: #00c896;
   --odeal-text: #e2e8f0;
   --odeal-muted: #94a3b8;
+  --odeal-nav-bg: rgba(10, 22, 40, 0.75);
+  --odeal-table-hover: rgba(255, 255, 255, 0.02);
+  --odeal-radial-1: rgba(255, 107, 53, 0.08);
+  --odeal-radial-2: rgba(0, 200, 150, 0.06);
+}
+
+:root[data-theme="light"] {
+  --odeal-dark: #f6f8fc;
+  --odeal-blue: #ffffff;
+  --odeal-surface: rgba(255, 255, 255, 0.7);
+  --odeal-border: rgba(15, 23, 42, 0.1);
+  --odeal-accent: #e2541c;
+  --odeal-accent-soft: rgba(226, 84, 28, 0.1);
+  --odeal-green: #00866b;
+  --odeal-text: #0f172a;
+  --odeal-muted: #475569;
+  --odeal-nav-bg: rgba(255, 255, 255, 0.85);
+  --odeal-table-hover: rgba(0, 0, 0, 0.02);
+  --odeal-radial-1: rgba(226, 84, 28, 0.06);
+  --odeal-radial-2: rgba(0, 134, 107, 0.04);
 }
 
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+
+html, body {
+  transition: background-color 240ms ease, color 240ms ease;
+}
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -21,8 +46,8 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(circle at 15% 50%, rgba(255, 107, 53, 0.08), transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(0, 200, 150, 0.06), transparent 50%);
+    radial-gradient(circle at 15% 50%, var(--odeal-radial-1), transparent 50%),
+    radial-gradient(circle at 85% 30%, var(--odeal-radial-2), transparent 50%);
 }
 
 .glass {
@@ -43,6 +68,12 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+[data-theme="light"] .gradient-text {
+  background: linear-gradient(135deg, #c93f12 0%, #e2541c 50%, #00866b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .btn-primary {
@@ -217,9 +248,82 @@ table { border-collapse: collapse; width: 100%; }
 table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--odeal-muted); padding: 12px 8px; border-bottom: 1px solid var(--odeal-border); font-weight: 500; }
 table td { padding: 12px 8px; font-size: 14px; }
 table tr { transition: background 150ms ease; }
-table tr:hover td { background: rgba(255,255,255,0.02); }
+table tr:hover td { background: var(--odeal-table-hover); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--odeal-dark); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,107,53,0.4); }
+
+/* ============= THEME TOGGLE BUTTON ============= */
+
+.theme-toggle {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--odeal-surface);
+  border: 1px solid var(--odeal-border);
+  color: var(--odeal-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 200ms ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--odeal-accent);
+  color: var(--odeal-accent);
+  transform: rotate(15deg);
+}
+
+.theme-toggle svg { width: 18px; height: 18px; }
+
+.theme-toggle .icon-sun { display: none; }
+.theme-toggle .icon-moon { display: block; }
+
+[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+
+/* ============= LIGHT THEME OVERRIDES (inline styles) ============= */
+
+[data-theme="light"] table th { color: var(--odeal-muted); border-bottom-color: var(--odeal-border); }
+
+/* Nav backdrop */
+[data-theme="light"] nav[style*="rgba(10,22,40"] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Surface backgrounds (specifically when used as background) */
+[data-theme="light"] [style*="background: rgba(255,255,255,0.02)"] { background-color: rgba(15, 23, 42, 0.025) !important; }
+[data-theme="light"] [style*="background: rgba(255,255,255,0.03)"] { background-color: rgba(15, 23, 42, 0.03) !important; }
+[data-theme="light"] [style*="background: rgba(255,255,255,0.04)"] { background-color: rgba(15, 23, 42, 0.035) !important; }
+[data-theme="light"] [style*="background: rgba(255,255,255,0.05)"] { background-color: rgba(15, 23, 42, 0.04) !important; }
+[data-theme="light"] [style*="background: rgba(255,255,255,0.06)"] { background-color: rgba(15, 23, 42, 0.05) !important; }
+[data-theme="light"] [style*="background: rgba(255,255,255,0.08)"] { background-color: rgba(15, 23, 42, 0.08) !important; }
+
+/* Plan toggle dark inner pill */
+[data-theme="light"] [style*="background: rgba(0,0,0,0.3)"] {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Borders */
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255"] { border-color: rgba(15, 23, 42, 0.08) !important; }
+[data-theme="light"] [style*="border-top: 1px solid rgba(255,255,255"] { border-top-color: rgba(15, 23, 42, 0.08) !important; }
+[data-theme="light"] [style*="border-bottom: 1px solid rgba(255,255,255"] { border-bottom-color: rgba(15, 23, 42, 0.08) !important; }
+[data-theme="light"] [style*="border-color: rgba(255,255,255"] { border-color: rgba(15, 23, 42, 0.08) !important; }
+
+/* Soft accent overlays — keep but adjust opacity in light */
+[data-theme="light"] [style*="background: rgba(255,107,53,0.08)"] { background-color: rgba(226, 84, 28, 0.06) !important; }
+[data-theme="light"] [style*="background: rgba(255,107,53,0.06)"] { background-color: rgba(226, 84, 28, 0.05) !important; }
+[data-theme="light"] [style*="background: rgba(0,200,150,0.04)"] { background-color: rgba(0, 134, 107, 0.05) !important; }
+
+/* Linear gradients (mixed accent + green) — let through, accent colors shift via vars naturally */
+
+/* Tailwind utility overrides for dark contexts */
+[data-theme="light"] .text-slate-100 { color: var(--odeal-text) !important; }
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.15); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(226,84,28,0.4); }
