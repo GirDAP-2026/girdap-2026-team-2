@@ -1,0 +1,27 @@
+{
+  "name": "girdap-2026-team-2",
+  "version": "1.0.0",
+  "description": "Odeal AI Copilot demo monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "build": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "test": "npm run test:smoke --prefix backend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GirDAP-2026/girdap-2026-team-2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/GirDAP-2026/girdap-2026-team-2/issues"
+  },
+  "homepage": "https://github.com/GirDAP-2026/girdap-2026-team-2#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

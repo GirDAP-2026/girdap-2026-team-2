@@ -1,0 +1,58 @@
+{
+  "$comment": "Kaynak: docs/odeal-tasarımlar/1.jpeg — Ödeal Copilot mockup renk ve tipografi referansı",
+  "source": "docs/odeal-tasarımlar/1.jpeg",
+  "typography": {
+    "fontSans": "Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    "trackingAccent": "0.2em"
+  },
+  "radius": {
+    "card": "12px",
+    "button": "10px",
+    "chip": "9999px"
+  },
+  "motion": {
+    "durationMs": 200,
+    "hoverLiftPx": 2,
+    "easing": "ease-out"
+  },
+  "shadow": {
+    "cardDark": "0 8px 24px rgba(0, 0, 0, 0.35)",
+    "cardLight": "0 8px 24px rgba(31, 35, 40, 0.12)"
+  },
+  "modes": {
+    "dark": {
+      "background": "#0d1117",
+      "backgroundElevated": "#161b22",
+      "sidebar": "#0b0e14",
+      "card": "#1c2128",
+      "cardHover": "#21262d",
+      "border": "#30363d",
+      "primary": "#ff5c00",
+      "primaryHover": "#ff7733",
+      "primaryMuted": "rgba(255, 92, 0, 0.14)",
+      "textPrimary": "#f0f6fc",
+      "textSecondary": "#8b949e",
+      "success": "#2ea043",
+      "danger": "#da3633",
+      "warning": "#d29922",
+      "focusRing": "rgba(255, 92, 0, 0.45)"
+    },
+    "light": {
+      "background": "#ffffff",
+      "backgroundElevated": "#f6f8fa",
+      "sidebar": "#f6f8fa",
+      "card": "#ffffff",
+      "cardHover": "#f6f8fa",
+      "border": "#d0d7de",
+      "primary": "#ff5c00",
+      "primaryHover": "#e35200",
+      "primaryMuted": "rgba(255, 92, 0, 0.12)",
+      "textPrimary": "#1f2328",
+      "textSecondary": "#656d76",
+      "success": "#1a7f37",
+      "danger": "#cf222e",
+      "warning": "#9a6700",
+      "focusRing": "rgba(255, 92, 0, 0.35)"
+    }
+  }
+}

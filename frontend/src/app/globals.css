@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/*
+  Tasarım token’ları: src/design/odeal-design-tokens.json ile aynı değerler.
+  Kaynak mockup: docs/odeal-tasarımlar/1.jpeg (Ödeal Copilot)
+*/
+
+:root[data-theme="dark"] {
+  --odeal-bg: #0d1117;
+  --odeal-bg-elevated: #161b22;
+  --odeal-sidebar: #0b0e14;
+  --odeal-card: #1c2128;
+  --odeal-card-hover: #21262d;
+  --odeal-border: #30363d;
+  --odeal-primary: #ff5c00;
+  --odeal-primary-hover: #ff7733;
+  --odeal-primary-muted: rgba(255, 92, 0, 0.14);
+  --odeal-text: #f0f6fc;
+  --odeal-text-muted: #8b949e;
+  --odeal-success: #2ea043;
+  --odeal-danger: #da3633;
+  --odeal-warning: #d29922;
+  --odeal-focus-ring: rgba(255, 92, 0, 0.45);
+  --odeal-radius: 12px;
+  --odeal-shadow-card: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --odeal-chat-assistant-bg: #21262d;
+  --odeal-chat-assistant-text: #f0f6fc;
+  --odeal-input-bg: #0d1117;
+}
+
+:root[data-theme="light"] {
+  --odeal-bg: #ffffff;
+  --odeal-bg-elevated: #f6f8fa;
+  --odeal-sidebar: #f6f8fa;
+  --odeal-card: #ffffff;
+  --odeal-card-hover: #f6f8fa;
+  --odeal-border: #d0d7de;
+  --odeal-primary: #ff5c00;
+  --odeal-primary-hover: #e35200;
+  --odeal-primary-muted: rgba(255, 92, 0, 0.12);
+  --odeal-text: #1f2328;
+  --odeal-text-muted: #656d76;
+  --odeal-success: #1a7f37;
+  --odeal-danger: #cf222e;
+  --odeal-warning: #9a6700;
+  --odeal-focus-ring: rgba(255, 92, 0, 0.35);
+  --odeal-radius: 12px;
+  --odeal-shadow-card: 0 8px 24px rgba(31, 35, 40, 0.12);
+  --odeal-chat-assistant-bg: #f6f8fa;
+  --odeal-chat-assistant-text: #1f2328;
+  --odeal-input-bg: #ffffff;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+body {
+  background: var(--odeal-bg);
+  color: var(--odeal-text);
+  font-family: Inter, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Kart / buton hover — mockup’taki hafif lift + vurgu */
+.odeal-hover-lift {
+  transition:
+    transform 0.2s ease-out,
+    border-color 0.2s ease-out,
+    background-color 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+
+.odeal-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--odeal-shadow-card);
+}
+
+.odeal-ring-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--odeal-bg), 0 0 0 4px var(--odeal-focus-ring);
+}
