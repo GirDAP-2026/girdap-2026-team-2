@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+<script>
+  // Tema flash önleme
+  (function() {
+    var saved = localStorage.getItem('odeal_theme');
+    var sysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    var theme = saved || (sysLight ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ödeal Copilot — KOBİ Karar Destek Portalı</title>
+<meta name="description" content="KOBİ'ler için satış, müşteri ve ödeme yönetiminde AI tabanlı tahminsel karar destek portalı.">
+
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="app.css">
+
+</head>
+<body class="app-body">
+
+<div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+<div class="app-shell">
+
+  <!-- ========= SIDEBAR ========= -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" style="text-decoration: none; display: block;">
+        <img src="assets/logo.svg" alt="Ödeal Copilot" style="height: 32px;">
+      </a>
+    </div>
+
+    <div class="sidebar-business">
+      <div class="sidebar-business-avatar">👩</div>
+      <div style="min-width: 0;">
+        <div class="sidebar-business-name">Ayşe'nin Butiği</div>
+        <div class="sidebar-business-meta">Kadıköy · POS aktif</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">Menü</div>
+    <nav id="sidebar-nav" class="sidebar-nav"></nav>
+
+    <div class="sidebar-footer">
+      <div id="plan-toggle-host"></div>
+      <div style="margin-top: 14px; text-align: center;">
+        <a href="index.html" style="font-size: 11.5px; color: var(--odeal-muted); text-decoration: none;">← Tanıtım sayfası</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========= MAIN ========= -->
+  <main class="app-main">
+    <!-- Topbar -->
+    <header class="app-topbar">
+      <div style="display: flex; align-items: center; gap: 14px; min-width: 0;">
+        <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Menü">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div style="min-width: 0;">
+          <div id="topbar-title" class="app-topbar-title">Bugün</div>
+          <div id="topbar-subtitle" class="app-topbar-subtitle"></div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <input type="search" class="app-topbar-search" placeholder="Müşteri, fatura veya ürün ara...">
+        <div id="topbar-right" style="display: flex; align-items: center; gap: 12px;"></div>
+      </div>
+    </header>
+
+    <!-- View content rendered by JS -->
+    <div id="view-content" class="view-content"></div>
+  </main>
+
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="data.js"></script>
+<script src="app-data.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
