@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ödeal AI Copilot — KOBİ'lerin Karar Destek Sistemi</title>
+<meta name="description" content="KOBİ'ler için satış, müşteri ve ödeme yönetiminde AI tabanlı tahminsel karar destek sistemi. LSTM + Transformer hibrit mimari.">
+
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'sans-serif'] },
+      colors: {
+        'odeal-dark': '#0a1628',
+        'odeal-blue': '#1a2b4a',
+        'odeal-accent': '#ff6b35',
+        'odeal-green': '#00c896',
+      }
+    }
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- ========== NAV ========== -->
+<nav class="fixed top-0 left-0 right-0 z-50" style="backdrop-filter: blur(16px); background: rgba(10,22,40,0.7); border-bottom: 1px solid rgba(255,255,255,0.06);">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="#hero" class="flex items-center gap-2">
+      <img src="assets/logo.svg" alt="Ödeal Copilot" class="h-9">
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-sm">
+      <a href="#problem" class="hover:text-odeal-accent transition">Problem</a>
+      <a href="#cozum" class="hover:text-odeal-accent transition">Çözüm</a>
+      <a href="#demo" class="hover:text-odeal-accent transition">Demo</a>
+      <a href="#mimari" class="hover:text-odeal-accent transition">Mimari</a>
+      <a href="#yol-haritasi" class="hover:text-odeal-accent transition">Yol Haritası</a>
+      <a href="#demo" class="btn-primary" style="padding: 8px 16px; font-size: 13px;">Demo'yu Gör</a>
+    </div>
+    <button id="mobile-menu-btn" class="md:hidden p-2" aria-label="Menü">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="mobile-menu" class="hidden md:hidden border-t" style="border-color: rgba(255,255,255,0.06);">
+    <div class="px-6 py-4 flex flex-col gap-4 text-sm">
+      <a href="#problem">Problem</a>
+      <a href="#cozum">Çözüm</a>
+      <a href="#demo">Demo</a>
+      <a href="#mimari">Mimari</a>
+      <a href="#yol-haritasi">Yol Haritası</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section id="hero" class="pt-36 pb-24 px-6">
+  <div class="max-w-5xl mx-auto text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6" style="background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3);">
+      <span class="pulse-dot"></span>
+      <span class="text-xs font-medium tracking-wide" style="color: var(--odeal-accent);">Ödeal POS müşterilerine ücretsiz · Karar Destek Sistemi (KDS)</span>
+    </div>
+    <h1 class="font-bold leading-tight mb-6" style="font-size: clamp(36px, 6vw, 64px);">
+      Ödeal POS'unuzla <span class="gradient-text">akıllı bir asistan</span> da geliyor.<br>
+      Tek tuşla: <span class="gradient-text">"Bugün ne yapayım?"</span>
+    </h1>
+    <p class="text-lg md:text-xl muted max-w-3xl mx-auto mb-10 leading-relaxed">
+      <strong style="color: var(--odeal-text);">Ödeal AI Copilot</strong> — POS'unuzun yanında <strong style="color: var(--odeal-green);">ücretsiz</strong> gelir.
+      Excel yok, kurulum yok, eğitim yok. Aç, oku, uygula. KOBİ için tasarlandı.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#demo" class="btn-primary">Canlı Demo'yu Gör →</a>
+      <a href="#cozum" class="btn-ghost">Nasıl Çalışıyor?</a>
+    </div>
+
+    <!-- Hero stat strip -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-4xl mx-auto">
+      <div class="glass p-5">
+        <div class="text-3xl font-bold gradient-text">0₺</div>
+        <div class="text-xs muted mt-1">POS'la birlikte ücretsiz</div>
+      </div>
+      <div class="glass p-5">
+        <div class="text-3xl font-bold gradient-text">5 dk</div>
+        <div class="text-xs muted mt-1">Kurulum süresi</div>
+      </div>
+      <div class="glass p-5">
+        <div class="text-3xl font-bold gradient-text">1 ekran</div>
+        <div class="text-xs muted mt-1">Tüm işiniz</div>
+      </div>
+      <div class="glass p-5">
+        <div class="text-3xl font-bold gradient-text">3.5M+</div>
+        <div class="text-xs muted mt-1">Hedef KOBİ pazarı</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PROBLEM ========== -->
+<section id="problem" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">PROBLEM</div>
+      <h2 class="section-heading">KOBİ'lerin gerçek günü</h2>
+      <p class="muted text-lg max-w-2xl mx-auto">Excel, defter, WhatsApp, POS — 4 ayrı sistem, hiçbiri konuşmuyor. Sonuç: veri bol, aksiyon yok.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="glass p-6">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Dağınık sistemler</h3>
+        <p class="muted text-sm leading-relaxed">Excel'de stok, defterde borç, WhatsApp'ta sipariş, POS'ta satış — manuel süreçler her gün saatler harcatıyor.</p>
+      </div>
+      <div class="glass p-6">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Geç ödemeler</h3>
+        <p class="muted text-sm leading-relaxed">Vadeli satış takip edilemiyor, geciken tahsilatlar nakit akışını bozuyor — KOBİ için ölümcül.</p>
+      </div>
+      <div class="glass p-6">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Müşteri körlüğü</h3>
+        <p class="muted text-sm leading-relaxed">En sadık kim? Kim kaybedildi? Hangi ürün kimin için? Veri var ama analiz yok, segmentasyon yok.</p>
+      </div>
+      <div class="glass p-6">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Tahmin yokluğu</h3>
+        <p class="muted text-sm leading-relaxed">Geçmişi raporlayan sistemler var, ama "yarın ne olacak?" sorusunu kimse cevaplamıyor.</p>
+      </div>
+      <div class="glass p-6">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Veri aksiyona dönmüyor</h3>
+        <p class="muted text-sm leading-relaxed">Dashboard dolu, panel dolu, rapor dolu — ama KOBİ sahibi paneli açmıyor bile. Aksiyon yapan yok.</p>
+      </div>
+      <div class="glass p-6" style="background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(0,200,150,0.05));">
+        <div class="w-11 h-11 rounded-xl mb-4 flex items-center justify-center" style="background: rgba(255,107,53,0.2);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3 class="font-semibold text-lg mb-2" style="color: var(--odeal-accent);">Fırsat: tahmine dayalı karar</h3>
+        <p class="text-sm leading-relaxed" style="color: var(--odeal-text);">Ödeal'in elindeki ödeme verisi + AI = KOBİ'nin sezgisi. Bu boşluğu doldurmuyor kimse.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ÇÖZÜM ========== -->
+<section id="cozum" class="py-24 px-6" style="background: linear-gradient(180deg, transparent, rgba(255,107,53,0.03), transparent);">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">ÇÖZÜM</div>
+      <h2 class="section-heading">Hibrit Yapay Zeka Mimarisi</h2>
+      <p class="muted text-lg max-w-3xl mx-auto">İki tamamlayıcı model. <strong style="color:var(--odeal-text);">LSTM</strong> sayıların geleceğini tahmin eder, <strong style="color:var(--odeal-text);">Transformer</strong> metinlerin anlamını çözer. Birlikte: tam resim.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- LSTM -->
+      <div class="glass p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #00c896, #007a5c);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+          </div>
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-green);">KATMAN 1</div>
+            <h3 class="text-xl font-bold">LSTM — Zaman Serisi</h3>
+          </div>
+        </div>
+        <p class="text-sm muted mb-5 leading-relaxed">Sayısal veriden trend, sezonsallık ve gelecek tahminleri çıkarır.</p>
+        <ul class="space-y-2.5 text-sm">
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Günlük satış tutarı</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Haftalık ödeme akışı</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Geciken tahsilatlar</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Sezonsal satış hareketleri</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Hafta içi / hafta sonu farkları</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-green);">●</span> Nakit akışı 30/60/90 gün tahmini</li>
+        </ul>
+      </div>
+
+      <!-- Transformer -->
+      <div class="glass p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #ff6b35, #c44d20);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-accent);">KATMAN 2</div>
+            <h3 class="text-xl font-bold">Transformer — Etkileşim Analizi</h3>
+          </div>
+        </div>
+        <p class="text-sm muted mb-5 leading-relaxed">Müşteri iletişimlerinden duygu, niyet ve risk sinyallerini okur.</p>
+        <ul class="space-y-2.5 text-sm">
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> WhatsApp mesajları</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> Müşteri şikayetleri</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> Sipariş notları</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> E-posta içerikleri</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> Destek talepleri</li>
+          <li class="flex items-start gap-2"><span style="color:var(--odeal-accent);">●</span> Duygu ve niyet analizi</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Pull-quote -->
+    <div class="mt-12 max-w-4xl mx-auto text-center">
+      <p class="text-xl md:text-2xl font-medium leading-snug" style="color: var(--odeal-text);">
+        <span style="color: var(--odeal-accent); font-size: 28px;">"</span>
+        AI'ı yalnızca müşteriyle konuşan bir chatbot olarak değil, satış ve ödeme davranışlarını <strong class="gradient-text">önceden tahmin eden bir karar destek sistemi</strong> olarak konumlandırıyoruz.
+        <span style="color: var(--odeal-accent); font-size: 28px;">"</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== DEMO ========== -->
+<section id="demo" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">CANLI DEMO</div>
+      <h2 class="section-heading">"Bugün ne yapmalıyım?"</h2>
+      <p class="muted text-lg max-w-3xl mx-auto">Ayşe Hanım'ın butiğine bir gün önce giriyorsunuz. Tek ekran. AI ne diyor? İşte AI'ın ona söylediği.</p>
+    </div>
+
+    <!-- Persona kartı -->
+    <div class="glass p-5 mb-6 max-w-2xl mx-auto flex items-center gap-4">
+      <div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl flex-shrink-0" style="background: linear-gradient(135deg, #ff6b35, #00c896);">👩</div>
+      <div>
+        <div class="font-semibold">Ayşe'nin Butiği</div>
+        <div class="text-sm muted">Kadıköy · 2 çalışan · Ödeal POS kullanıcısı · 8 ay aktif</div>
+      </div>
+    </div>
+
+    <!-- Dashboard grid -->
+    <div class="grid lg:grid-cols-2 gap-5">
+      <!-- Widget A: Bugün Ne Yapmalıyım? -->
+      <div class="glass p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-accent);">BUGÜN İÇİN</div>
+            <h3 class="text-lg font-bold mt-1">Bugün ne yapayım?</h3>
+          </div>
+          <span class="pulse-dot"></span>
+        </div>
+        <div id="todays-actions" class="space-y-2.5"></div>
+      </div>
+
+      <!-- Widget B: Müşterilerim -->
+      <div class="glass p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-accent);">MÜŞTERİLERİM</div>
+            <h3 class="text-lg font-bold mt-1">Kim sadık? Kim kaybediliyor?</h3>
+          </div>
+          <span class="text-xs muted">8 müşteri</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>İsim</th>
+                <th>Son ziyaret</th>
+                <th>Toplam</th>
+                <th>Skor</th>
+                <th>Risk</th>
+              </tr>
+            </thead>
+            <tbody id="customers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Widget C: Nakit Akışı -->
+      <div class="glass p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-accent);">NAKİT TAHMİNİ</div>
+            <h3 class="text-lg font-bold mt-1">Önümüzdeki 30 gün ne olur?</h3>
+          </div>
+          <span class="text-xs muted">9 Nis – 7 Haz</span>
+        </div>
+        <div style="height: 240px;">
+          <canvas id="cashflow-chart"></canvas>
+        </div>
+        <div class="mt-4 p-3 rounded-lg flex items-start gap-2" style="background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2);">
+          <span>⚠️</span>
+          <span class="text-sm">18 Mayıs'ta geçici nakit açığı riski (8.000₺). Tahsilat planı önerildi.</span>
+        </div>
+      </div>
+
+      <!-- Widget D: AI Chat -->
+      <div class="glass p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <div class="text-xs font-semibold tracking-wider" style="color: var(--odeal-accent);">İŞLETMENE SOR</div>
+            <h3 class="text-lg font-bold mt-1">Soruyu yaz, AI cevaplasın</h3>
+          </div>
+          <span class="pulse-dot"></span>
+        </div>
+        <div class="flex flex-wrap gap-2 mb-5">
+          <button class="chat-suggestion" onclick="askChat('en-riskli')">En riskli müşterim kim?</button>
+          <button class="chat-suggestion" onclick="askChat('bu-hafta')">Bu hafta ne yapmalıyım?</button>
+          <button class="chat-suggestion" onclick="askChat('nakit-durumu')">Nakit durumum nasıl?</button>
+        </div>
+        <div id="chat-response">
+          <div class="muted text-sm italic" style="padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; text-align: center;">
+            👆 Bir soru seç, AI Asistan cevaplasın
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== MİMARİ / VERİ AKIŞI ========== -->
+<section id="mimari" class="py-24 px-6" style="background: linear-gradient(180deg, transparent, rgba(0,200,150,0.03), transparent);">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">SİSTEM AKIŞI</div>
+      <h2 class="section-heading">Veriden aksiyona</h2>
+      <p class="muted text-lg max-w-2xl mx-auto">Ham veri → AI motoru → karar destek. 5 adımda KOBİ'nin operasyonunun merkezine yerleşir.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row items-stretch justify-center gap-3">
+      <div class="glass p-5 flex-1 text-center">
+        <div class="text-2xl mb-2">📥</div>
+        <div class="text-xs muted mb-1">1. ADIM</div>
+        <div class="font-semibold mb-1">Veri Girişi</div>
+        <div class="text-xs muted">POS · satış · müşteri · ödeme · WhatsApp / mail</div>
+      </div>
+      <div class="flex items-center justify-center"><div class="flow-arrow"></div></div>
+      <div class="glass p-5 flex-1 text-center">
+        <div class="text-2xl mb-2">🧠</div>
+        <div class="text-xs muted mb-1">2. ADIM</div>
+        <div class="font-semibold mb-1">AI Motoru</div>
+        <div class="text-xs muted">LSTM + Transformer + öneri algoritması</div>
+      </div>
+      <div class="flex items-center justify-center"><div class="flow-arrow"></div></div>
+      <div class="glass p-5 flex-1 text-center">
+        <div class="text-2xl mb-2">📊</div>
+        <div class="text-xs muted mb-1">3. ADIM</div>
+        <div class="font-semibold mb-1">Çıktılar</div>
+        <div class="text-xs muted">risk skoru · müşteri skoru · ödeme tahmini</div>
+      </div>
+      <div class="flex items-center justify-center"><div class="flow-arrow"></div></div>
+      <div class="glass p-5 flex-1 text-center">
+        <div class="text-2xl mb-2">🎯</div>
+        <div class="text-xs muted mb-1">4. ADIM</div>
+        <div class="font-semibold mb-1">Karar Destek</div>
+        <div class="text-xs muted">akıllı aksiyon önerileri</div>
+      </div>
+      <div class="flex items-center justify-center"><div class="flow-arrow"></div></div>
+      <div class="glass p-5 flex-1 text-center" style="border-color: rgba(255,107,53,0.4); background: rgba(255,107,53,0.08);">
+        <div class="text-2xl mb-2">✨</div>
+        <div class="text-xs mb-1" style="color:var(--odeal-accent);">5. ADIM</div>
+        <div class="font-semibold mb-1">Kullanıcı Paneli</div>
+        <div class="text-xs muted">"Bugün ne yapmalıyım?" ekranı</div>
+      </div>
+    </div>
+
+    <!-- Veri yapıları -->
+    <div class="mt-16">
+      <h3 class="text-center text-lg font-semibold mb-6 muted">Beslenen 5 Veri Kaynağı</h3>
+      <div class="grid md:grid-cols-5 gap-3">
+        <div class="glass p-4 text-center"><div class="text-xl mb-2">💳</div><div class="text-sm font-semibold">Satış</div><div class="text-xs muted mt-1">tutar, işlem, kampanya, iade</div></div>
+        <div class="glass p-4 text-center"><div class="text-xl mb-2">👥</div><div class="text-sm font-semibold">Müşteri</div><div class="text-xs muted mt-1">geçmiş, sadakat, davranış</div></div>
+        <div class="glass p-4 text-center"><div class="text-xl mb-2">💰</div><div class="text-sm font-semibold">Ödeme</div><div class="text-xs muted mt-1">vade, gecikme, geçmiş</div></div>
+        <div class="glass p-4 text-center"><div class="text-xl mb-2">💬</div><div class="text-sm font-semibold">İletişim</div><div class="text-xs muted mt-1">WhatsApp, mail, çağrı</div></div>
+        <div class="glass p-4 text-center"><div class="text-xl mb-2">🌍</div><div class="text-sm font-semibold">Dış Veri</div><div class="text-xs muted mt-1">hava, tatil, ekonomi</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== İŞ MODELİ ========== -->
+<section id="is-modeli" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">İŞ MODELİ</div>
+      <h2 class="section-heading">POS aldığında <span class="gradient-text">hediye</span></h2>
+      <p class="muted text-lg max-w-2xl mx-auto">
+        Ödeal POS satışları için <strong style="color:var(--odeal-text);">değer katmanı</strong> olarak konumlanır.
+        Müşteri POS aldığında AI Copilot ücretsiz aktif olur — Ödeal'in rekabet farkı, KOBİ'nin günlük asistanı.
+      </p>
+    </div>
+
+    <!-- Bundle vurgusu -->
+    <div class="glass p-8 mb-10 max-w-4xl mx-auto" style="background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(0,200,150,0.06)); border-color: rgba(255,107,53,0.4);">
+      <div class="grid md:grid-cols-3 gap-6 items-center">
+        <div class="text-center">
+          <div class="text-5xl mb-2">📱</div>
+          <div class="font-bold text-lg">Ödeal POS</div>
+          <div class="text-xs muted mt-1">cihaz + ödeme altyapısı</div>
+        </div>
+        <div class="text-center text-3xl gradient-text">+</div>
+        <div class="text-center">
+          <div class="text-5xl mb-2">✨</div>
+          <div class="font-bold text-lg">AI Copilot</div>
+          <div class="text-xs muted mt-1">karar destek sistemi · ücretsiz</div>
+        </div>
+      </div>
+      <div class="text-center mt-6 pt-6" style="border-top: 1px solid rgba(255,255,255,0.08);">
+        <p class="text-base">Tek POS aboneliği. <strong style="color:var(--odeal-green);">Ek ücret yok.</strong> Müşteri için fark = kararı veren AI. Ödeal için fark = <strong style="color:var(--odeal-accent);">churn azalır, ARPU artar.</strong></p>
+      </div>
+    </div>
+
+    <!-- Paketler — Bundle + Premium upgrade -->
+    <div class="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+      <div class="glass p-7" style="border-color: rgba(0,200,150,0.4); background: rgba(0,200,150,0.04);">
+        <div class="text-xs font-semibold tracking-wider mb-2" style="color:var(--odeal-green);">POS İLE BİRLİKTE</div>
+        <div class="flex items-baseline gap-1 mb-1">
+          <span class="text-4xl font-bold">Ücretsiz</span>
+        </div>
+        <p class="text-xs muted mb-6">Tüm Ödeal POS müşterilerine dahil</p>
+        <ul class="space-y-2.5 text-sm">
+          <li class="flex gap-2"><span style="color:var(--odeal-green);">✓</span> "Bugün ne yapayım?" paneli</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-green);">✓</span> Müşteri Sağlık Skoru</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-green);">✓</span> Nakit akışı 30 gün tahmini</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-green);">✓</span> AI Asistan chat (günde 20 soru)</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-green);">✓</span> Mobil + web erişim</li>
+        </ul>
+      </div>
+
+      <div class="glass p-7" style="border-color: rgba(255,107,53,0.5); background: rgba(255,107,53,0.06); position: relative;">
+        <div style="position: absolute; top: -10px; right: 24px; background: var(--odeal-accent); color: white; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;">UPSELL</div>
+        <div class="text-xs font-semibold tracking-wider mb-2" style="color:var(--odeal-accent);">COPILOT PRO</div>
+        <div class="flex items-baseline gap-1 mb-1">
+          <span class="text-4xl font-bold">+199₺</span>
+          <span class="muted text-sm">/ay</span>
+        </div>
+        <p class="text-xs muted mb-6">Aktif KOBİ'ler için ekstra otomasyon</p>
+        <ul class="space-y-2.5 text-sm">
+          <li class="flex gap-2"><span style="color:var(--odeal-accent);">✓</span> Otomatik WhatsApp tahsilat takibi</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-accent);">✓</span> Sınırsız AI sorgu</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-accent);">✓</span> Kampanya motoru (otomatik öneri+gönder)</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-accent);">✓</span> Çoklu mağaza yönetimi</li>
+          <li class="flex gap-2"><span style="color:var(--odeal-accent);">✓</span> Öncelikli destek</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Pazar boyutu / Ödeal'e değer -->
+    <div class="mt-12 grid md:grid-cols-3 gap-5">
+      <div class="glass p-6 text-center"><div class="text-3xl font-bold gradient-text mb-1">↓ %35</div><div class="text-xs muted">Tahmini POS müşteri churn azalması</div></div>
+      <div class="glass p-6 text-center"><div class="text-3xl font-bold gradient-text mb-1">↑ %22</div><div class="text-xs muted">Hedef ARPU artışı (Pro upsell)</div></div>
+      <div class="glass p-6 text-center"><div class="text-3xl font-bold gradient-text mb-1">3.5M+</div><div class="text-xs muted">Türkiye'deki KOBİ pazarı</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== YOL HARİTASI ========== -->
+<section id="yol-haritasi" class="py-24 px-6" style="background: linear-gradient(180deg, transparent, rgba(255,107,53,0.03), transparent);">
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">YOL HARİTASI</div>
+      <h2 class="section-heading">12 ayda pazara</h2>
+    </div>
+
+    <div class="relative pl-14">
+      <div class="timeline-line"></div>
+
+      <div class="relative mb-10 fade-in">
+        <div class="timeline-dot"></div>
+        <div class="glass p-5">
+          <div class="text-xs font-semibold tracking-wider mb-1" style="color:var(--odeal-accent);">Q3 2026 · MVP</div>
+          <h4 class="font-bold mb-2">Kapalı Pilot — 50 KOBİ</h4>
+          <p class="text-sm muted">İstanbul'da 50 Ödeal POS müşterisiyle kapalı pilot. LSTM nakit akışı + Müşteri Sağlık Skoru çekirdeği. Ücretsiz, geri bildirim odaklı.</p>
+        </div>
+      </div>
+
+      <div class="relative mb-10 fade-in">
+        <div class="timeline-dot"></div>
+        <div class="glass p-5">
+          <div class="text-xs font-semibold tracking-wider mb-1" style="color:var(--odeal-accent);">Q4 2026 · Beta</div>
+          <h4 class="font-bold mb-2">Açık Beta — 1.000 KOBİ</h4>
+          <p class="text-sm muted">Transformer katmanı eklenir, AI Asistan chat aktif. WhatsApp Business entegrasyonu. Pro paket 199₺ erken üye fiyatı.</p>
+        </div>
+      </div>
+
+      <div class="relative mb-10 fade-in">
+        <div class="timeline-dot"></div>
+        <div class="glass p-5">
+          <div class="text-xs font-semibold tracking-wider mb-1" style="color:var(--odeal-accent);">Q1 2027 · Genel Lansman</div>
+          <h4 class="font-bold mb-2">Genel Erişim — 10.000+ KOBİ</h4>
+          <p class="text-sm muted">3 paket aktif. Otomatik kampanya motoru, sektör şablonları (butik, restoran, kafe). Saha ekibi eğitimleri.</p>
+        </div>
+      </div>
+
+      <div class="relative fade-in">
+        <div class="timeline-dot"></div>
+        <div class="glass p-5">
+          <div class="text-xs font-semibold tracking-wider mb-1" style="color:var(--odeal-accent);">Q2 2027 · Genişleme</div>
+          <h4 class="font-bold mb-2">Sesli Asistan + Mobil</h4>
+          <p class="text-sm muted">Sabah Brifingi sesli özet, mobil uygulama, çoklu mağaza desteği. Hedef: %20 penetrasyon, 700K KOBİ.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== EKİP ========== -->
+<section id="ekip" class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="section-title">EKİP</div>
+      <h2 class="section-heading">GirDAP-2026 · Team-2</h2>
+      <p class="muted text-lg">Kurumsal sorunları AI ile çözmeye inanan multidisipliner takım.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="glass p-5 text-center">
+        <div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: linear-gradient(135deg, #ff6b35, #00c896);">👤</div>
+        <div class="font-semibold">Takım Üyesi 1</div>
+        <div class="text-xs muted mt-1">Product / Strateji</div>
+      </div>
+      <div class="glass p-5 text-center">
+        <div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: linear-gradient(135deg, #00c896, #ff6b35);">👤</div>
+        <div class="font-semibold">Takım Üyesi 2</div>
+        <div class="text-xs muted mt-1">AI / Veri</div>
+      </div>
+      <div class="glass p-5 text-center">
+        <div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: linear-gradient(135deg, #ff6b35, #00c896);">👤</div>
+        <div class="font-semibold">Takım Üyesi 3</div>
+        <div class="text-xs muted mt-1">Tasarım / Frontend</div>
+      </div>
+      <div class="glass p-5 text-center">
+        <div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: linear-gradient(135deg, #00c896, #ff6b35);">👤</div>
+        <div class="font-semibold">Takım Üyesi 4</div>
+        <div class="text-xs muted mt-1">İş Modeli / Pitch</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="px-6 py-10" style="border-top: 1px solid rgba(255,255,255,0.06);">
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm muted">
+    <div class="flex items-center gap-3">
+      <img src="assets/logo.svg" alt="Ödeal Copilot" class="h-7">
+    </div>
+    <div class="text-xs text-center md:text-right">
+      GirDAP 2026 · Team-2 · Ödeal Case Study<br>
+      <a href="https://github.com/GirDAP-2026/girdap-2026-team-2" class="hover:text-odeal-accent transition">github.com/GirDAP-2026/girdap-2026-team-2</a>
+    </div>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
