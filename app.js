@@ -145,6 +145,7 @@ const AI_MODULES = [
     label: 'Mesaj Asistanı',
     iconEmoji: '✉️',
     color: '#ff6b35',
+    pro: true,
     description: 'WhatsApp/SMS için kişiselleştirilmiş mesajlar üretir. Ton ve uzunluk seçilebilir.',
     prompts: [
       {
@@ -209,6 +210,7 @@ Ayşe</div>
     label: 'Kampanya Stüdyosu',
     iconEmoji: '🎯',
     color: '#ec4899',
+    pro: true,
     description: 'Hedef segment, mesaj ve zamanlama önerir. AI, geçmiş kampanya verisinden öğrenir.',
     prompts: [
       {
@@ -547,17 +549,22 @@ function buildSidebar() {
 function buildModulesSection() {
   const host = document.getElementById('sidebar-modules');
   if (!host) return;
+  const isPro = APP.state.plan === 'pro';
   host.innerHTML = `
     <div class="sidebar-section" style="display: flex; align-items: center; gap: 6px;">
       <span>AI Modülleri</span>
-      <span style="font-size: 9px; padding: 1px 6px; border-radius: 4px; background: rgba(255,107,53,0.15); color: var(--odeal-accent); font-weight: 700; letter-spacing: 0.5px;">YENİ</span>
+      <span style="font-size: 9px; padding: 1px 6px; border-radius: 4px; background: rgba(255,107,53,0.15); color: var(--odeal-accent); font-weight: 700; letter-spacing: 0.5px;">${isPro ? '5/5' : '3/5'}</span>
     </div>
-    ${AI_MODULES.map(m => `
-      <button class="nav-item module-nav-item" data-view="module-${m.id}" onclick="navigate('module-${m.id}')" style="--mod-color: ${m.color};">
-        <span class="nav-item-icon module-emoji">${m.iconEmoji}</span>
-        <span class="nav-item-text">${m.label}</span>
-      </button>
-    `).join('')}
+    ${AI_MODULES.map(m => {
+      const locked = m.pro && !isPro;
+      return `
+        <button class="nav-item module-nav-item ${locked ? 'locked' : ''}" data-view="module-${m.id}" onclick="navigate('module-${m.id}')" style="--mod-color: ${m.color};">
+          <span class="nav-item-icon module-emoji">${m.iconEmoji}</span>
+          <span class="nav-item-text">${m.label}</span>
+          ${m.pro ? `<span class="nav-item-badge ${locked ? 'lock' : ''}">PRO</span>` : ''}
+        </button>
+      `;
+    }).join('')}
   `;
 }
 
@@ -660,7 +667,13 @@ function navigate(view) {
   // AI Module rota: module-<id>
   if (view.startsWith('module-')) {
     const moduleId = view.slice('module-'.length);
-    renderModule(moduleId);
+    const m = AI_MODULES.find(x => x.id === moduleId);
+    // Pro-only modül + Free planda → paywall
+    if (m && m.pro && APP.state.plan === 'free') {
+      renderModulePaywall(m);
+    } else {
+      renderModule(moduleId);
+    }
     updateActiveNav();
     return;
   }
@@ -2087,6 +2100,35 @@ function renderPaywall(view) {
       </div>
       <div style="margin-top: 24px; font-size: 11.5px; color: var(--odeal-muted);">
         🔒 Demo modu: Pro'ya geç butonuyla simülasyon olarak özelliği açabilirsin
+      </div>
+    </div>
+  `;
+}
+
+// ============= AI MODULE PAYWALL (Pro-only modüller için) =============
+function renderModulePaywall(m) {
+  setTopbarTitle(m.label, 'Bu AI modülü POS Pro+ ile gelir');
+  $view().innerHTML = `
+    <div class="paywall" style="border-color: ${m.color};">
+      <div class="paywall-icon" style="background: linear-gradient(135deg, ${m.color}30, ${m.color}10); border-color: ${m.color}80;">${m.iconEmoji}</div>
+      <div class="paywall-title">${m.label}</div>
+      <div class="paywall-text">${m.description}</div>
+      <div class="paywall-features">
+        <div class="paywall-feature"><span class="paywall-feature-icon">✓</span> 5/5 AI modülü tam erişim</div>
+        <div class="paywall-feature"><span class="paywall-feature-icon">✓</span> Sınırsız Gemini sorgu</div>
+        <div class="paywall-feature"><span class="paywall-feature-icon">✓</span> Otomatik WhatsApp + kampanya motoru</div>
+        <div class="paywall-feature"><span class="paywall-feature-icon">✓</span> Çoklu mağaza yönetimi</div>
+      </div>
+      <div class="paywall-price">
+        <span class="paywall-price-value">+199₺</span>
+        <span class="paywall-price-period">/ay · POS aboneliğinin üstüne</span>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="btn btn-accent" onclick="setPlan('pro')">${I.sparkle} POS Pro+'ya geç</button>
+        <button class="btn btn-outline" onclick="navigate('settings')">Plan detayları</button>
+      </div>
+      <div style="margin-top: 24px; font-size: 11.5px; color: var(--odeal-muted);">
+        🔒 Demo modu: Plan toggle ile simülasyon olarak açabilirsin
       </div>
     </div>
   `;
