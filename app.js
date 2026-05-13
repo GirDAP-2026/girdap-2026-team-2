@@ -325,6 +325,7 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
   loadState();
   applyThemeOnLoad();
+  if (typeof refreshScopedData === 'function') refreshScopedData();
   renderSidebarBusiness();
   buildSidebar();
   buildTopbarRight();
@@ -445,8 +446,10 @@ function enterPatronMode(patronId) {
   APP.state.currentBusinessId = null;
   APP.state.isPatronMode = true;
   saveScope();
+  if (typeof refreshScopedData === 'function') refreshScopedData();
   closeScopeModal();
   renderSidebarBusiness();
+  buildTopbarRight();
   const p = PATRONS.find(x => x.id === patronId);
   showToast(`👁️ ${p.fullName} · Patron Modu (${p.businessIds.length} bayi)`, 'success');
   // AI history sıfırla — yeni scope, yeni context
@@ -459,8 +462,10 @@ function enterBusinessMode(patronId, businessId) {
   APP.state.currentBusinessId = businessId;
   APP.state.isPatronMode = false;
   saveScope();
+  if (typeof refreshScopedData === 'function') refreshScopedData();
   closeScopeModal();
   renderSidebarBusiness();
+  buildTopbarRight();
   const b = BUSINESSES[businessId];
   showToast(`🏪 ${b.shortName}'na geçildi`, 'success');
   APP.state.aiHistory = [];
@@ -611,6 +616,15 @@ function buildTopbarRight() {
   const host = document.getElementById('topbar-right');
   if (!host) return;
   const plan = APP.state.plan;
+  const s = currentScope();
+  const patron = s.patron;
+  const avatar = patron ? patron.avatar : '👤';
+  const name = patron ? patron.fullName : 'Kullanıcı';
+  const subtitle = patron
+    ? (s.isPatron ? `Patron · ${patron.businessIds.length} bayi` : (s.business ? s.business.shortName : ''))
+    : '';
+  const color = patron ? patron.color : 'var(--odeal-accent)';
+
   host.innerHTML = `
     <span class="plan-badge ${plan}">
       ${plan === 'pro' ? '✨ Pro' : '🟢 Standart'}
@@ -619,10 +633,13 @@ function buildTopbarRight() {
       <span class="icon-moon">${I.moon}</span>
       <span class="icon-sun">${I.sun}</span>
     </button>
-    <div class="user-pill">
-      <div class="user-pill-avatar">A</div>
-      <div class="user-pill-name">Ayşe Hanım</div>
-    </div>
+    <button class="user-pill user-pill-btn" onclick="openScopeModal()" title="Patron / bayi değiştir">
+      <div class="user-pill-avatar" style="background: linear-gradient(135deg, ${color}, ${color}aa);">${avatar}</div>
+      <div class="user-pill-text">
+        <div class="user-pill-name">${name}</div>
+        ${subtitle ? `<div class="user-pill-sub">${subtitle}</div>` : ''}
+      </div>
+    </button>
   `;
 }
 
@@ -1203,7 +1220,24 @@ function closeCustomer() {
 }
 
 function actionApplySuggestion(name) {
-  showToast(`✓ ${name} için AI önerisi uygulandı`, 'success');
+  // Önerilen aksiyonu uyguladık say: müşteriye not düş, son ziyareti tazele.
+  const c = customersDetailed.find(x => x.name === name);
+  if (c) {
+    c.lastSuggestionApplied = new Date().toISOString();
+    if (!c.appliedSuggestions) c.appliedSuggestions = [];
+    c.appliedSuggestions.push(c.suggestion);
+  }
+  // Kuyruğa otomatik WhatsApp mesajı ekle
+  if (Array.isArray(whatsappQueue) && c) {
+    whatsappQueue.unshift({
+      customer: c.name,
+      type: 'AI öneri aksiyonu',
+      status: 'Onay bekliyor',
+      scheduledFor: 'Bugün ' + new Date(Date.now() + 30 * 60000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      preview: `Merhaba ${c.name} 👋\n\n${c.suggestion}`,
+    });
+  }
+  showToast(`✓ ${name} için aksiyon kuyruğa eklendi`, 'success');
 }
 
 // ============= VIEW: PAYMENTS =============
@@ -1292,17 +1326,27 @@ function renderPayments() {
       </table>
     </div>
 
-    ${tab === 'overdue' && messageDrafts['Mehmet Tan'] ? `
+    ${(() => {
+      if (tab !== 'overdue') return '';
+      const firstOverdue = invoices.find(i => i.status === 'overdue');
+      const draftCustomer = firstOverdue ? firstOverdue.customer : null;
+      const draft = draftCustomer ? messageDrafts[draftCustomer] : null;
+      if (!draftCustomer || !draft) return '';
+      APP.state.currentDraftCustomer = draftCustomer;
+      const customerProfile = customersDetailed.find(c => c.name === draftCustomer);
+      const yearly = customerProfile ? customerProfile.totalSpend : firstOverdue.amount * 4;
+      const visits = customerProfile ? customerProfile.visits : 12;
+      return `
       <div class="app-card" style="margin-top: 14px;" id="msg-draft-card">
         <div class="app-card-header">
           <div>
-            <div class="app-card-title">📨 AI'nın hazırladığı hatırlatma mesajı (Mehmet Tan)</div>
-            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;" id="msg-draft-tone">Ton: ${messageDrafts['Mehmet Tan'].tone} · Onayınla gönderilir</div>
+            <div class="app-card-title">📨 AI'nın hazırladığı hatırlatma mesajı (${draftCustomer})</div>
+            <div style="font-size: 11px; color: var(--odeal-muted); margin-top: 2px;" id="msg-draft-tone">Ton: ${draft.tone} · Onayınla gönderilir</div>
           </div>
           <span class="badge badge-info" id="msg-draft-badge">cache</span>
         </div>
         <div class="app-card-body">
-          <div id="msg-draft-text" style="background: rgba(0,200,150,0.06); border: 1px solid rgba(0,200,150,0.15); padding: 14px; border-radius: 12px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">${messageDrafts['Mehmet Tan'].text}</div>
+          <div id="msg-draft-text" style="background: rgba(0,200,150,0.06); border: 1px solid rgba(0,200,150,0.15); padding: 14px; border-radius: 12px; white-space: pre-line; font-size: 13.5px; line-height: 1.6;">${draft.text}</div>
 
           <div style="margin-top: 14px;">
             <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--odeal-muted); font-weight: 600; margin-bottom: 8px;">AI ton ayarı (Gemini ile yeniden yaz)</div>
@@ -1317,35 +1361,32 @@ function renderPayments() {
           </div>
 
           <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);">
-            <button class="btn btn-sm btn-success" onclick="sendReminder('Mehmet Tan')">${I.check} Onayla & Gönder</button>
+            <button class="btn btn-sm btn-success" onclick="sendReminder('${draftCustomer.replace(/'/g, "\\'")}')">${I.check} Onayla & Gönder</button>
             <button class="btn btn-sm btn-outline" onclick="resetDraft()">↻ Orijinal taslağa dön</button>
             <button class="btn btn-sm btn-outline" onclick="showToast('Kopyalandı','success')">📋 Kopyala</button>
           </div>
 
           <details style="margin-top: 14px;">
-            <summary style="cursor: pointer; font-size: 12px; color: var(--odeal-muted); padding: 6px 0;">📋 Mehmet Tan ile geçmiş ilişki ve geri bildirimler</summary>
+            <summary style="cursor: pointer; font-size: 12px; color: var(--odeal-muted); padding: 6px 0;">📋 ${draftCustomer} müşteri profili</summary>
             <div style="padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-top: 8px; font-size: 12.5px; line-height: 1.6;">
               <div style="margin-bottom: 8px;"><strong>📊 Müşteri profili:</strong></div>
               <ul style="margin: 0 0 12px 18px; color: var(--odeal-muted); padding: 0;">
-                <li>Yıllık harcama: 12.500₺ (TOP 10'da)</li>
-                <li>Önceki 22 ödemesinde 21 zamanında, 1 gecikmiş (bu)</li>
-                <li>Son 3 ödemenin ortalama süresi: vadeden 2 gün önce</li>
-              </ul>
-              <div style="margin-bottom: 8px;"><strong>💬 Son geri bildirimler:</strong></div>
-              <ul style="margin: 0 0 12px 18px; padding: 0;">
-                <li style="color: #f87171;">"Ürün geç geldi, bu sefer mağdur oldum." — 15 Nisan</li>
-                <li style="color: var(--odeal-muted);">"Her zamanki gibi memnun kaldım, teşekkürler." — 8 Mart</li>
-                <li style="color: #00c896;">"Ayşe Hanım çok ilgili, 5 yıldız." — 12 Şubat</li>
+                <li>Yıllık harcama: ${yearly.toLocaleString('tr-TR')}₺</li>
+                <li>Toplam ziyaret: ${visits}</li>
+                <li>Açık fatura: ${fmtTL(firstOverdue.amount)} · ${firstOverdue.daysOverdue} gün gecikmiş</li>
               </ul>
               <div style="margin-bottom: 8px;"><strong>🤖 AI yorumu:</strong></div>
               <div style="color: var(--odeal-muted);">
-                Müşteri normalde sadık ve düzenli ödeme yapıyor. Son şikâyet metninde olumsuz duygu var (sentiment skor: -0.62). Bu gecikme bir <em>tepki</em> olabilir — sert ton riskli, yumuşak başlamak daha akıllı.
+                ${customerProfile && customerProfile.risk === 'high'
+                  ? 'Risk seviyesi yüksek. Sert ton riskli — yumuşak başlamak daha akıllı.'
+                  : 'Müşteri normalde düzenli ödeme yapıyor. Bu gecikme istisna olabilir, ilk hatırlatma yumuşak tonla yeterli.'}
               </div>
             </div>
           </details>
         </div>
       </div>
-    ` : ''}
+    `;
+    })()}
   `;
 }
 
@@ -1355,7 +1396,37 @@ function setPaymentTab(t) {
 }
 
 function sendReminder(name) {
+  // 1) İlgili faturayı işaretle (varsa)
+  if (Array.isArray(invoices)) {
+    const inv = invoices.find(i => i.customer === name && i.status === 'overdue' && !i.reminderSentAt);
+    if (inv) inv.reminderSentAt = new Date().toISOString();
+  }
+  // 2) Kuyruktaki ilgili mesajı history'e geçir
+  if (Array.isArray(whatsappQueue) && Array.isArray(whatsappHistory)) {
+    const idx = whatsappQueue.findIndex(m => m.customer === name);
+    if (idx >= 0) {
+      const m = whatsappQueue.splice(idx, 1)[0];
+      whatsappHistory.unshift({
+        customer: m.customer,
+        type: m.type,
+        status: 'Gönderildi',
+        sentAt: 'Az önce',
+        revenue: null,
+      });
+    } else {
+      whatsappHistory.unshift({
+        customer: name,
+        type: 'Tahsilat hatırlatma',
+        status: 'Gönderildi',
+        sentAt: 'Az önce',
+        revenue: null,
+      });
+    }
+  }
   showToast(`✓ ${name}'a WhatsApp hatırlatma gönderildi`, 'success');
+  // Tahsilat ekranı açıksa yenile
+  if (APP.state.view === 'payments') renderPayments();
+  if (APP.state.view === 'whatsapp') renderWhatsApp();
 }
 
 // AI ton rewriter — Gemini ile mevcut taslağı yeniden yaz
@@ -1403,16 +1474,19 @@ async function rewriteDraftTone(toneInstruction) {
 }
 
 function resetDraft() {
+  const customer = APP.state.currentDraftCustomer;
+  const draft = customer ? messageDrafts[customer] : null;
+  if (!draft) return;
   const textEl = document.getElementById('msg-draft-text');
   const badgeEl = document.getElementById('msg-draft-badge');
   const toneEl = document.getElementById('msg-draft-tone');
-  if (textEl && messageDrafts['Mehmet Tan']) {
-    textEl.textContent = messageDrafts['Mehmet Tan'].text;
+  if (textEl) {
+    textEl.textContent = draft.text;
     if (badgeEl) {
       badgeEl.textContent = 'cache';
       badgeEl.className = 'badge badge-info';
     }
-    if (toneEl) toneEl.textContent = `Ton: ${messageDrafts['Mehmet Tan'].tone} · Onayınla gönderilir`;
+    if (toneEl) toneEl.textContent = `Ton: ${draft.tone} · Onayınla gönderilir`;
     showToast('Orijinal taslağa döndün');
   }
 }
@@ -1431,7 +1505,7 @@ function renderCampaigns() {
     <div class="app-card">
       <div class="app-card-header">
         <div class="app-card-title">Kampanyalarım</div>
-        <button class="btn btn-sm btn-accent">+ Yeni Kampanya</button>
+        <button class="btn btn-sm btn-accent" onclick="createCampaign()">+ Yeni Kampanya</button>
       </div>
       <div class="app-card-body" style="padding: 0;">
         <table class="app-table">
@@ -1477,13 +1551,100 @@ function renderCampaigns() {
               <div style="font-size: 22px; margin-bottom: 8px;">${t.icon}</div>
               <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${t.name}</div>
               <div style="font-size: 12px; color: var(--odeal-muted); line-height: 1.5; margin-bottom: 12px;">${t.desc}</div>
-              <button class="btn btn-sm btn-outline" onclick="showToast('Şablon yüklendi: ${t.name}','success')">Kullan →</button>
+              <button class="btn btn-sm btn-outline" onclick="applyCampaignTemplate('${t.name.replace(/'/g, "\\'")}','${t.icon}')">Kullan →</button>
             </div>
           `).join('')}
         </div>
       </div>
     </div>
   `;
+}
+
+// ============= CAMPAIGN ACTIONS =============
+function createCampaign() {
+  if (APP.state.plan !== 'pro') {
+    showToast('Yeni kampanya Pro üyelik gerektirir');
+    setPlan('pro');
+    return;
+  }
+  const name = prompt('Yeni kampanya adı?', 'Mini kampanya - ' + new Date().toLocaleDateString('tr-TR'));
+  if (!name) return;
+  const segments = ['VIP', 'Sadık', 'Düzenli', 'Kayıp Risk', 'Hepsi'];
+  const targetSegment = segments[Math.floor(Math.random() * segments.length)];
+  campaigns.unshift({
+    id: Date.now(),
+    name: name.trim(),
+    status: 'scheduled',
+    type: 'whatsapp',
+    targetSegment,
+    scheduled: new Date(Date.now() + 86400000).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ', 10:00',
+    estimatedReach: 25 + Math.floor(Math.random() * 40),
+    expectedRevenue: 2000 + Math.floor(Math.random() * 6000),
+  });
+  showToast(`"${name}" kampanyası zamanlandı`, 'success');
+  renderCampaigns();
+}
+
+function applyCampaignTemplate(templateName, icon) {
+  if (APP.state.plan !== 'pro') {
+    showToast('Kampanya şablonları Pro üyelik gerektirir');
+    setPlan('pro');
+    return;
+  }
+  campaigns.unshift({
+    id: Date.now(),
+    name: `${icon} ${templateName}`,
+    status: 'scheduled',
+    type: 'whatsapp',
+    targetSegment: 'Önerilen segment',
+    scheduled: new Date(Date.now() + 86400000).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ', 14:00',
+    estimatedReach: 30 + Math.floor(Math.random() * 50),
+    expectedRevenue: 3000 + Math.floor(Math.random() * 7000),
+  });
+  showToast(`✓ Şablon yüklendi: ${templateName}`, 'success');
+  renderCampaigns();
+}
+
+// ============= WHATSAPP ACTIONS =============
+function approveWhatsApp(customer) {
+  if (!Array.isArray(whatsappQueue)) return;
+  const idx = whatsappQueue.findIndex(m => m.customer === customer);
+  if (idx < 0) return;
+  const msg = whatsappQueue.splice(idx, 1)[0];
+  whatsappHistory.unshift({
+    customer: msg.customer,
+    type: msg.type,
+    status: 'Gönderildi',
+    sentAt: 'Az önce',
+    revenue: null,
+  });
+  showToast(`✓ ${customer}'a mesaj gönderildi`, 'success');
+  renderWhatsApp();
+}
+
+function approveAllWhatsApp() {
+  if (!Array.isArray(whatsappQueue) || whatsappQueue.length === 0) return;
+  const count = whatsappQueue.length;
+  const drained = whatsappQueue.splice(0, whatsappQueue.length);
+  drained.forEach(m => whatsappHistory.unshift({
+    customer: m.customer,
+    type: m.type,
+    status: 'Gönderildi',
+    sentAt: 'Az önce',
+    revenue: null,
+  }));
+  showToast(`✓ ${count} mesaj onaylandı ve gönderildi`, 'success');
+  renderWhatsApp();
+}
+
+function editWhatsAppDraft(customer) {
+  const msg = whatsappQueue.find(m => m.customer === customer);
+  if (!msg) return;
+  const next = prompt(`${customer} için mesajı düzenle:`, msg.preview);
+  if (next === null) return;
+  msg.preview = next.trim();
+  showToast('Mesaj güncellendi', 'success');
+  renderWhatsApp();
 }
 
 // ============= VIEW: WHATSAPP (Pro) =============
@@ -1500,7 +1661,7 @@ function renderWhatsApp() {
     <div class="app-card">
       <div class="app-card-header">
         <div class="app-card-title">📥 Onay bekleyen mesajlar</div>
-        <button class="btn btn-sm btn-success">Hepsini onayla</button>
+        <button class="btn btn-sm btn-success" onclick="approveAllWhatsApp()" ${whatsappQueue.length === 0 ? 'disabled' : ''}>Hepsini onayla</button>
       </div>
       <div class="app-card-body" style="padding: 0;">
         <table class="app-table">
@@ -1515,8 +1676,8 @@ function renderWhatsApp() {
                 <td style="font-size: 12.5px; color: var(--odeal-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.preview}</td>
                 <td><span class="badge badge-muted">${m.scheduledFor}</span></td>
                 <td style="display: flex; gap: 4px;">
-                  <button class="btn btn-sm btn-success" onclick="showToast('✓ Mesaj gönderildi','success')">Onayla</button>
-                  <button class="btn btn-sm btn-outline">Düzenle</button>
+                  <button class="btn btn-sm btn-success" onclick="approveWhatsApp('${m.customer.replace(/'/g, "\\'")}')">Onayla</button>
+                  <button class="btn btn-sm btn-outline" onclick="editWhatsAppDraft('${m.customer.replace(/'/g, "\\'")}')">Düzenle</button>
                 </td>
               </tr>
             `).join('')}
@@ -1679,18 +1840,23 @@ async function processChat(userText) {
   scrollChatToBottom();
 
   let aiText = null;
+  let aiSource = 'fallback';
   try {
     if (typeof askGemini === 'function') {
       const result = await askGemini(userText);
-      if (result && result.text) aiText = result.text;
+      if (result && result.text) {
+        aiText = result.text;
+        aiSource = result.source || 'gemini';
+      }
     }
   } catch (e) {
     console.warn('Gemini çağrısı başarısız:', e);
   }
 
-  // Fallback: scope-aware mock
+  // Fallback: scope-aware mock — kullanıcıya net olarak bildir
   if (!aiText) {
-    aiText = generateScopeAwareResponse(userText);
+    aiText = '<em style="color:var(--odeal-muted); font-size:11px;">⚠ AI servisine ulaşılamadı, yedek cevap gösteriliyor:</em><br><br>'
+      + generateScopeAwareResponse(userText);
   }
 
   // Replace typing placeholder
@@ -2172,9 +2338,9 @@ function renderModule(id) {
         <button class="btn btn-accent" onclick="askModuleFreeform('${m.id}')">${I.send}</button>
       </div>
 
-      <div style="margin-top: 16px; padding: 12px 14px; background: rgba(255,255,255,0.02); border-radius: 10px; font-size: 11.5px; color: var(--odeal-muted); line-height: 1.5; display: flex; align-items: center; gap: 8px;">
-        <span>🔌</span>
-        <span>Bu modül şu an mock veriyle çalışıyor. <code style="background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; font-family: monospace;">backend/api/${m.id}</code> uç noktasına bağlandığında Gemini'den gerçek cevap gelecek.</span>
+      <div id="module-status-${m.id}" style="margin-top: 16px; padding: 12px 14px; background: rgba(0,200,150,0.05); border: 1px solid rgba(0,200,150,0.15); border-radius: 10px; font-size: 11.5px; color: var(--odeal-muted); line-height: 1.5; display: flex; align-items: center; gap: 8px;">
+        <span>🤖</span>
+        <span><strong style="color:#00c896;">Gemini bağlı.</strong> Bir soru sorduğunda canlı cevap üretilir. Gemini'ye ulaşılamazsa hazırda yedek cevap gösterilir.</span>
       </div>
     </div>
   `;

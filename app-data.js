@@ -1,6 +1,6 @@
 // ============= APP MOCK DATA — Ayşe'nin Butiği =============
 
-const business = {
+let business = {
   name: "Ayşe'nin Butiği",
   ownerName: "Ayşe Kara",
   location: "Kadıköy, İstanbul",
@@ -10,7 +10,7 @@ const business = {
 };
 
 // Today's snapshot
-const todayStats = {
+let todayStats = {
   todaySales: 4750,
   yesterdaySales: 4350,
   openInvoices: 3,
@@ -21,7 +21,7 @@ const todayStats = {
 };
 
 // Detailed customers (extends existing customers list)
-const customersDetailed = [
+let customersDetailed = [
   {
     id: 1, name: "Ayşe Kara", phone: "+90 532 *** 4421",
     lastVisit: "2 gün önce", totalSpend: 4200, healthScore: 89, risk: "low",
@@ -81,7 +81,7 @@ const customersDetailed = [
 ];
 
 // Payments / Tahsilat
-const invoices = [
+let invoices = [
   // Gecikmiş
   { id: "FT-2348", customer: "Mehmet Tan", amount: 3500, issued: "20 Nis", due: "4 May", status: "overdue", daysOverdue: 5 },
   { id: "FT-2331", customer: "Selim Demir", amount: 2200, issued: "15 Nis", due: "29 Nis", status: "overdue", daysOverdue: 10 },
@@ -98,7 +98,7 @@ const invoices = [
 ];
 
 // AI suggested actions for messages
-const messageDrafts = {
+let messageDrafts = {
   "Mehmet Tan": {
     tone: "samimi-hatırlatıcı",
     text: "Merhaba Mehmet Bey 👋\n\nUmarım iyisinizdir. Geçen ay aldığınız ürünlerin 3.500₺ tutarındaki ödemesinin vadesi 4 Mayıs'ta dolmuştu. Belki gözden kaçtı diye hatırlatmak istedim.\n\nDilerseniz tek tıkla buradan ödeyebilirsiniz: [link]\n\nSorularınız olursa hemen yazın.\n\nİyi günler,\nAyşe — Ayşe'nin Butiği"
@@ -110,7 +110,7 @@ const messageDrafts = {
 };
 
 // Campaigns (Pro)
-const campaigns = [
+let campaigns = [
   {
     id: 1, name: "Kayıp Müşteri Geri Kazanma", status: "active", type: "whatsapp",
     targetSegment: "Kayıp Risk", sent: 23, opened: 18, converted: 7,
@@ -138,13 +138,13 @@ const campaignTemplates = [
 ];
 
 // WhatsApp messages (Pro)
-const whatsappQueue = [
+let whatsappQueue = [
   { customer: "Mehmet Tan", type: "Tahsilat hatırlatma", status: "Onay bekliyor", scheduledFor: "Bugün 14:00", preview: "Merhaba Mehmet Bey 👋..." },
   { customer: "Selim Demir", type: "Tahsilat hatırlatma", status: "Onay bekliyor", scheduledFor: "Bugün 15:00", preview: "Merhaba Selim Bey 👋..." },
   { customer: "Zeynep Aksoy", type: "%10 indirim teklifi", status: "Onay bekliyor", scheduledFor: "Yarın 10:00", preview: "Merhaba Zeynep Hanım..." }
 ];
 
-const whatsappHistory = [
+let whatsappHistory = [
   { customer: "Cem Öztürk", type: "VIP teşekkür", status: "Açıldı + Tıklandı", sentAt: "Dün 11:24", revenue: 850 },
   { customer: "Ali Korkmaz", type: "Yeni ürün bildirimi", status: "Açıldı", sentAt: "Dün 09:18", revenue: null },
   { customer: "Elif Şahin", type: "Hoş geldin 2/3", status: "Açıldı", sentAt: "2 gün önce 16:45", revenue: 380 },
